@@ -16,20 +16,27 @@ use serde_json::Value;
 const FORMAT: &str = "%Y-%m-%d";
 
 #[derive(Serialize, Deserialize)]
-struct Entry {
-    rows: Vec<Row>
+struct Month {
+    month: u32,
+    year: u32,
+    name: String,
+    weeks: Vec<Week>
 }
 
 #[derive(Serialize, Deserialize)]
-struct Row {
-    year: u32,
-    month: u32,
-    day: u32,
-    weekday: String,
-    event: String
+struct Week {
+    days: Vec<Day>
 }
 
-fn weekday(i: chrono::Weekday) -> String {
+#[derive(Serialize, Deserialize)]
+struct Day {
+    day: u32,
+    weekday: String,
+    event: String,
+    is_non_workday: bool
+}
+
+fn get_weekday_name(i: chrono::Weekday) -> String {
     match i {
         Weekday::Mon => String::from("Pondělí"),
         Weekday::Tue => String::from("Úterý"),
@@ -41,31 +48,69 @@ fn weekday(i: chrono::Weekday) -> String {
     }
 }
 
-fn read_month(month: u32, year: u32) -> Entry {
-    
-    let mut result: Vec<Row> = Vec::new();
+fn get_month_name(m: u32) -> String {
+    match m {
+         1 => String::from("Leden"),
+         2 => String::from("Únor"),
+         3 => String::from("Březen"),
+         4 => String::from("Duben"),
+         5 => String::from("Květen"),
+         6 => String::from("Červen"),
+         7 => String::from("Červenec"),
+         8 => String::from("Srpen"),
+         9 => String::from("Zaří"),
+        10 => String::from("Říjen"),
+        11 => String::from("Listopad"),
+        12 => String::from("Prosinec"),
+         _ => String::from(""),
+    }
+}
+
+fn read_month(month: u32, year: u32) -> Month {
+
+    let month_name = get_month_name(month);
 
     let days = get_month_days(month, year);
+    
+    let mut weeks: Vec<Week> = Vec::new();
+
+    let mut week: Vec<Day> = Vec::new();
     
     for day in days {
 
         let key = day.format(FORMAT).to_string();    
 
-        let weekday: String = weekday(day.weekday());
+        let weekday: String = get_weekday_name(day.weekday());
 
-        let entry = Row {
-            year: day.year() as u32,
-            month: day.month(),
+        let non_workday =
+            day.weekday() == Weekday::Sat ||
+            day.weekday() == Weekday::Sun;
+
+        let entry = Day {
             day: day.day(),
             weekday: weekday,
-            event: String::from("")
+            event: String::from(""),
+            is_non_workday: non_workday
         };
 
-        result.push(entry);
+        week.push(entry);
+
+        if day.weekday() == Weekday::Sun {
+            weeks.push(Week { days: week });
+            week = Vec::new();
+        }
+    }
+
+    if week.len() != 0 {
+        weeks.push(Week { days: week });
     }
     
-    let result = result;
-    return Entry { rows: result };
+    Month {
+        month: month,
+        year: year,
+        name: month_name,
+        weeks: weeks
+    }    
 }
 
 fn get_month_days(month: u32, year: u32) -> Vec<NaiveDate> {    

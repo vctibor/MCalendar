@@ -2,7 +2,7 @@
 <html>
 
 <head>
-  <title>Listopad 2018</title>
+  <title>{{name}} {{year}}</title>
   <meta charset="UTF-8">
   <link rel="stylesheet" href="./style.css">
 </head>
@@ -11,7 +11,7 @@
 
   <div class="heading">
     <span class="arrow_previous">◀</span>
-    <span class=heading_label>Listopad 2018</span>
+    <span class=heading_label>{{name}} {{year}}</span>
     <span class="arrow_next">▶</span>
   </div>
 
@@ -21,14 +21,15 @@
 
   <div class="calendar">
 
+    {{#each weeks as |w|}}
 
     <table>
 
-      {{#each rows}}
+      {{#each days as |d|}}
 
       <tr>
-        <td class="col_date">{{day}}. {{month}}. {{year}}</td>
-        <td class="col_weekday">{{weekday}}</td>
+        <td class="col_date">{{day}}. {{../../month}}. {{../../year}}</td>
+        <td class="col_weekday {{~#if is_non_workday}} non_working_day {{~/if~}}">{{weekday}}</td>
         <td class="col_event">
           <input type="text" value="{{event}}"/>
         </td>
@@ -37,6 +38,10 @@
       {{/each}}
 
     </table>
+
+    <br>
+
+    {{/each}}
 
   </div>
 

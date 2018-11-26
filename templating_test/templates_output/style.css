@@ -9,6 +9,9 @@ input {
     border-style: none;
     width: 100%;
     font-size: 90%;
+    min-width: 100px;
+    display: table-cell;
+    border-bottom: 1px solid #333;
 }
 
 .heading {
