@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Listopad 2018</title>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="./style.css">
+</head>
+
+<body>
+
+  <div class="heading">
+    <span class="arrow_previous">◀</span>
+    <span class=heading_label>Listopad 2018</span>
+    <span class="arrow_next">▶</span>
+  </div>
+
+  <br>
+  <hr>
+  <br>
+
+  <div class="calendar">
+
+
+    <table>
+
+      {{#each rows}}
+
+      <tr>
+        <td class="col_date">{{day}}. {{month}}. {{year}}</td>
+        <td class="col_weekday">{{weekday}}</td>
+        <td class="col_event">
+          <input type="text" value="{{event}}"/>
+        </td>
+      </tr>
+
+      {{/each}}
+
+    </table>
+
+  </div>
+
+  <br>
+  <hr>
+  <br>
+    
+</body>
+
+</html> 

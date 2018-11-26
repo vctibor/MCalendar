@@ -1,0 +1,12 @@
+[package]
+name = "templating_test"
+version = "0.1.0"
+authors = ["Vladimír Ctibor <vladimir.ctibor@samo.cz>"]
+edition = "2018"
+
+[dependencies]
+handlebars = "*"
+serde = "*"
+serde_derive = "*"
+serde_json = "1.0"
+chrono = "*"
