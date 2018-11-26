@@ -11,23 +11,19 @@ extern crate serde;
 extern crate handlebars;
 extern crate rocket_contrib;
 
-use rocket::http::RawStr;
 use once_cell::sync::OnceCell;
 use sled::{Tree, ConfigBuilder};
 use chrono::prelude::*;
 use chrono::NaiveDate;
 use clap::{App, Arg};
-use serde_json::{Value, Error};
-use std::io::prelude::*;
-use std::fs::File;
-use std::path::Path;
+use serde_json::Value;
 use handlebars::Handlebars;
-use std::fmt;
 use rocket::http::ContentType;
-use rocket::Response;
-use rocket::http::Status;
 use rocket::response::Content;
 use rocket_contrib::serve::StaticFiles;
+use rocket::config::{Config, Environment};
+
+// TODO: Split into multiple files
 
 // Default path to file persistenting key-value store.
 const PATH: &str = "./mcal_db.sled";
@@ -36,6 +32,8 @@ const PATH: &str = "./mcal_db.sled";
 const FORMAT: &str = "%Y-%m-%d";
 
 static TREE: OnceCell<sled::Tree> = OnceCell::INIT;
+
+static HBS: OnceCell<Handlebars> = OnceCell::INIT;
 
 #[derive(Serialize, Deserialize)]
 struct Month {
@@ -169,31 +167,23 @@ fn get_month_days(month: u32, year: u32) -> Vec<NaiveDate> {
     return days;
 }
 
-
-// Accepted routes:
-// [GET]  /read-month/{year}/{month}
-// [POST] /write-event/{year}/{month}/{day} - event v body
-
-/*
-#[get("/")]
-fn index_handler() -> String {
-
+fn now() -> NaiveDate {
+    let d = Local::now().date();
+    NaiveDate::from_ymd(d.year(), d.month(), d.day())
 }
-*/
+
+#[get("/")]
+fn index_handler() -> Content<String> {
+    let now = now();
+    index_month_handler(now.year() as u32, now.month())
+}
 
 #[get("/<year>/<month>")]
-fn index_month_handler(year: u32, month: u32) -> Content<String> {
-    
+fn index_month_handler(year: u32, month: u32) -> Content<String> {    
     let month = read_month(month, year);
-
     let json_value: Value = json!(month);
-
-    let mut handlebars = Handlebars::new();
-
-    let template = handlebars.register_template_file("month", "./templates_input/index.hbs").unwrap();
-
+    let handlebars = HBS.get().unwrap();
     let res = handlebars.render("month", &json_value).unwrap();
-
     Content(ContentType::HTML, res)
 }
 
@@ -228,26 +218,46 @@ fn main() {
             .takes_value(true))
         .get_matches();
 
+    // Setup Sled
+
     let sled_file = options.value_of("file").unwrap_or(PATH);
 
-
-    let config = ConfigBuilder::new()
+    let sled_config = ConfigBuilder::new()
         .temporary(false)
         .path(sled_file)
         .build();
 
-    let tree = Some(Tree::start(config).unwrap());
+    let tree = Some(Tree::start(sled_config).unwrap());
     
     TREE.set(tree.unwrap()).unwrap();
 
+
+    // Setup Handlebars
+
+    let mut handlebars: handlebars::Handlebars = Handlebars::new();
+    handlebars.register_template_file("month", "./templates_input/index.hbs").unwrap();
+
+    HBS.set(handlebars).unwrap();
+
+
+    // Setup Rocket
+
+    let rocket_config = Config::build(Environment::Staging)
+        //.address("127.0.0.1")
+        .address("192.168.8.101")
+        .port(8000)
+        .workers(12)
+        .unwrap();
+
     let routes = routes![
-        //index_handler,
+        index_handler,
         index_month_handler,
         read_month_handler,
-        write_event_handler];
+        write_event_handler
+    ];
 
-    rocket::ignite()
+    rocket::custom(rocket_config)
         .mount("/", routes)
-        .mount("/", StaticFiles::from("/home/malky/Projects/mcalendar/mc/static"))
+        .mount("/", StaticFiles::from("static"))
         .launch();
 }

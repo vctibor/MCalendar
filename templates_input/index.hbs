@@ -4,15 +4,19 @@
 <head>
   <title>{{name}} {{year}}</title>
   <meta charset="UTF-8">
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="/css/style.css">
+   <script src="/js/site.js"></script> 
 </head>
 
 <body>
 
+  <input id="year" type="hidden" value="{{year}}"/>
+  <input id="month" type="hidden" value="{{month}}"/>
+
   <div class="heading">
-    <span class="arrow_previous">◀</span>
+    <span class="arrow" id="arrow_previous">◀</span>
     <span class=heading_label>{{name}} {{year}}</span>
-    <span class="arrow_next">▶</span>
+    <span class="arrow" id="arrow_next">▶</span>
   </div>
 
   <br>
@@ -21,17 +25,17 @@
 
   <div class="calendar">
 
-    {{#each weeks as |w|}}
+    {{#each weeks}}
 
     <table>
 
-      {{#each days as |d|}}
+      {{#each days}}
 
       <tr>
         <td class="col_date">{{day}}. {{../../month}}.</td>
         <td class="col_weekday {{~#if is_non_workday}} non_working_day {{~/if~}}">{{weekday}}</td>
         <td class="col_event">
-          <input type="text" value="{{event}}"/>
+          <input type="text" data-day="{{day}}" value="{{event}}"/>
         </td>
       </tr>
 
