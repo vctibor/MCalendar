@@ -1,0 +1,67 @@
+body {
+    background-color: #222;
+    color: #999;
+}
+
+input {
+    background-color: #222;
+    color: #999;
+    border-style: none;
+    width: 100%;
+    font-size: 90%;
+    min-width: 100px;
+    display: table-cell;
+    border-bottom: 1px solid #333;
+}
+
+.heading {
+    color: rgb(255, 166, 0);
+    text-align: center;
+}
+
+.arrow_previous, .arrow_next {
+    font-size: 150%;
+    padding-right: 1vw;
+    padding-left: 1vw;
+}
+
+.heading_label {
+    font-size: 150%;
+    font-weight: bold;
+}
+
+ul {
+    list-style-type: none;
+}
+
+.calendar {
+    margin: auto;
+    width: 99%;
+}
+
+.col_date {
+    min-width: 80px;
+    font-weight: bold;
+    
+    padding-right: 1vw;
+}
+
+.col_weekday {
+    font-style: italic;
+    color: #555;
+    padding-right: 3vw;
+}
+
+.col_event {
+    width: 100%;
+}
+
+hr {
+    border: 0;
+    height: 1px;
+    background-image: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(138, 138, 138, 0.75), rgba(0, 0, 0, 0));
+}
+
+.non_working_day {
+    color: rgb(255, 166, 0);
+}
