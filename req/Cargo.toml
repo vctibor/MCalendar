@@ -1,0 +1,11 @@
+[package]
+name = "req"
+version = "0.1.0"
+authors = ["Vladimír Ctibor <vladimir.ctibor@samo.cz>"]
+edition = "2018"
+
+[dependencies]
+reqwest = "*"
+serde = "*"
+serde_json = "*"
+serde_derive = "*"
