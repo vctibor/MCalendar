@@ -7,7 +7,9 @@ extern crate once_cell;
 extern crate serde;
 #[macro_use] extern crate serde_json;
 #[macro_use] extern crate serde_derive;
+
 #[macro_use] extern crate rocket;
+
 extern crate handlebars;
 extern crate rocket_contrib;
 
@@ -244,7 +246,7 @@ fn main() {
 
     let rocket_config = Config::build(Environment::Staging)
         //.address("127.0.0.1")
-        .address("192.168.8.101")
+        .address("192.168.196.186")
         .port(8000)
         .workers(12)
         .unwrap();
