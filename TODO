@@ -1,0 +1,5 @@
+- vyzkouset reimplementaci s Iron frameworkem
+- logovani
+- build release RPM
+- systemd unit
+- konfigurace (TOML)
