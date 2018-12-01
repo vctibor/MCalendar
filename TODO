@@ -3,3 +3,4 @@
 - build release RPM
 - systemd unit
 - konfigurace (TOML)
+- implementovat svatky
