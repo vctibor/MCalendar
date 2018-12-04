@@ -237,7 +237,7 @@ fn main() {
     // Setup Handlebars
 
     let mut handlebars: handlebars::Handlebars = Handlebars::new();
-    handlebars.register_template_file("month", "./templates_input/index.hbs").unwrap();
+    handlebars.register_template_file("month", "./templates//index.hbs").unwrap();
 
     HBS.set(handlebars).unwrap();
 
