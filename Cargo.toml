@@ -2,6 +2,8 @@
 name = "mcalendar"
 version = "0.2.0"
 authors = ["Vladimir Malky <vladimir.malky@gmail.com>"]
+license = "GPL-3.0-only"
+description = "Calendar"
 
 [dependencies]
 rocket = "0.4.0-rc.1"
