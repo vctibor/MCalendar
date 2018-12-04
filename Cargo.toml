@@ -2,6 +2,8 @@
 name = "mcalendar"
 version = "0.2.0"
 authors = ["Vladimir Malky <vladimir.malky@gmail.com>"]
+description = "Calendar"
+license = "GPL-3.0-only"
 
 [dependencies]
 rocket = "0.4.0-rc.1"
@@ -14,3 +16,9 @@ serde_derive = "*"
 serde_json = "1.0"
 handlebars = "*"
 rocket_contrib = "0.4.0-rc.1"
+
+[package.metadata.rpm.cargo]
+buildflags = ["--release"]
+
+[package.metadata.rpm.targets]
+mcalendar = { path = "/usr/bin/mcalendar" }
