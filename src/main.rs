@@ -1,4 +1,3 @@
-#![feature(proc_macro_hygiene, decl_macro)]
 
 extern crate sled;
 extern crate chrono;
@@ -8,10 +7,9 @@ extern crate serde;
 #[macro_use] extern crate serde_json;
 #[macro_use] extern crate serde_derive;
 
-#[macro_use] extern crate rocket;
+#[macro_use] extern crate rouille;
 
 extern crate handlebars;
-extern crate rocket_contrib;
 
 use once_cell::sync::OnceCell;
 use sled::{Tree, ConfigBuilder};
@@ -20,10 +18,7 @@ use chrono::NaiveDate;
 use clap::{App, Arg};
 use serde_json::Value;
 use handlebars::Handlebars;
-use rocket::http::ContentType;
-use rocket::response::Content;
-use rocket_contrib::serve::StaticFiles;
-use rocket::config::{Config, Environment};
+use std::io::Read;
 
 // TODO: Split into multiple files
 
@@ -174,30 +169,28 @@ fn now() -> NaiveDate {
     NaiveDate::from_ymd(d.year(), d.month(), d.day())
 }
 
-#[get("/")]
-fn index_handler() -> Content<String> {
+fn index_handler() -> String {
     let now = now();
     index_month_handler(now.year() as u32, now.month())
 }
 
-#[get("/<year>/<month>")]
-fn index_month_handler(year: u32, month: u32) -> Content<String> {    
+fn index_month_handler(year: u32, month: u32) -> String {    
     let month = read_month(month, year);
     let json_value: Value = json!(month);
     let handlebars = HBS.get().unwrap();
     let res = handlebars.render("month", &json_value).unwrap();
-    Content(ContentType::HTML, res)
+    res
 }
 
-#[get("/read-month/<year>/<month>")]
 fn read_month_handler(year: u32, month: u32) -> String {
     let entries = read_month(month, year);
     let res = serde_json::to_string(&entries).unwrap();
     res
 }
 
-#[post("/write-event/<year>/<month>/<day>", data = "<event>")]
-fn write_event_handler(year: u32, month: u32, day: u32, event: String) -> () {
+fn write_event_handler(year: u32, month: u32, day: u32, request: &rouille::Request) -> () {
+    let mut event: String = "".to_string();
+    request.data().unwrap().read_to_string(&mut event).unwrap();
     write_event(day, month, year, event);
 }
 
@@ -242,24 +235,37 @@ fn main() {
     HBS.set(handlebars).unwrap();
 
 
-    // Setup Rocket
 
-    let rocket_config = Config::build(Environment::Staging)
-        //.address("127.0.0.1")
-        .address("192.168.196.186")
-        .port(8000)
-        .workers(12)
-        .unwrap();
+    rouille::start_server("localhost:8000", move |request| {
+    
+        let response = rouille::match_assets(&request, "./static/");
 
-    let routes = routes![
-        index_handler,
-        index_month_handler,
-        read_month_handler,
-        write_event_handler
-    ];
+        if response.is_success() {
+            return response;
+        }
 
-    rocket::custom(rocket_config)
-        .mount("/", routes)
-        .mount("/", StaticFiles::from("static"))
-        .launch();
+        router!(request,
+            (GET) (/) => {
+                let res = index_handler();
+                rouille::Response::html(res)
+            },
+
+            (GET) (/{year: u32}/{month: u32}) => {
+                let res = index_month_handler(year, month);
+                rouille::Response::html(res)
+            },
+
+            (GET) (/read-month/{year: u32}/{month: u32}) => {
+                let res = read_month_handler(year, month);
+                rouille::Response::html(res)
+            },
+
+            (POST) (/write-event/{year: u32}/{month: u32}/{day: u32}) => {
+                write_event_handler(year, month, day, &request);                
+                rouille::Response::empty_204()
+            },
+
+            _ => rouille::Response::empty_404()
+        )
+    });
 }

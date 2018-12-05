@@ -6,7 +6,6 @@ license = "GPL-3.0-only"
 description = "Calendar"
 
 [dependencies]
-rocket = "0.4.0-rc.1"
 sled = "*"
 chrono = "*"
 clap = "*"
@@ -15,7 +14,7 @@ serde = "*"
 serde_derive = "*"
 serde_json = "1.0"
 handlebars = "*"
-rocket_contrib = "0.4.0-rc.1"
+rouille = "2.2.0"
 
 [package.metadata.rpm.cargo]
 buildflags = ["--release"]
