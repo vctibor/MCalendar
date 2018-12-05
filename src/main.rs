@@ -1,4 +1,3 @@
-
 extern crate sled;
 extern crate chrono;
 extern crate clap;
@@ -6,9 +5,7 @@ extern crate once_cell;
 extern crate serde;
 #[macro_use] extern crate serde_json;
 #[macro_use] extern crate serde_derive;
-
 #[macro_use] extern crate rouille;
-
 extern crate handlebars;
 
 use once_cell::sync::OnceCell;
@@ -234,9 +231,7 @@ fn main() {
 
     HBS.set(handlebars).unwrap();
 
-
-
-    rouille::start_server("localhost:8000", move |request| {
+    rouille::start_server("127.0.0.1:8000", move |request| {
     
         let response = rouille::match_assets(&request, "./static/");
 
