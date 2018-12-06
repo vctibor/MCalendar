@@ -6,13 +6,13 @@ echo "Clean build directory"
 rm -rf target
 
 echo "Build release version"
-~/.cargo/bin/cargo build --release
+/home/malky/.cargo/bin/cargo build --release
 
 echo "Init .rpm builder"
-~/.cargo/bin/cargo rpm init
+/home/malky/.cargo/bin/cargo rpm init
 
 echo "Build .rpm package"
-~/.cargo/bin/cargo rpm build
+/home/malky/.cargo/bin/cargo rpm build
 
 echo "Stop systemd service"
 systemctl stop mcalendar.service
