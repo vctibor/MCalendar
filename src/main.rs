@@ -5,9 +5,16 @@ extern crate once_cell;
 extern crate serde;
 extern crate handlebars;
 extern crate reqwest;
+extern crate toml;
 #[macro_use] extern crate serde_json;
 #[macro_use] extern crate serde_derive;
 #[macro_use] extern crate rouille;
+
+use std::io::Read;
+use std::collections::HashMap;
+use std::env;
+use std::fs::File;
+use std::io::prelude::*;
 
 use once_cell::sync::OnceCell;
 use sled::{Tree, ConfigBuilder};
@@ -16,8 +23,6 @@ use chrono::NaiveDate;
 use clap::{App, Arg};
 use serde_json::{Value, Error};
 use handlebars::Handlebars;
-use std::io::Read;
-use std::collections::HashMap;
 
 /*
 TODO: 
@@ -34,8 +39,10 @@ Konfigurace:
 - port
 */
 
+/*
 // Default path to file persistenting key-value store.
 const PATH: &str = "./mcal_db.sled";
+*/
 
 // Format in which is date used as key in key-value store.
 const FORMAT: &str = "%Y-%m-%d";
@@ -90,6 +97,26 @@ struct Holiday {
 }
 /* ---- */
 
+
+/* -- configuration -- */
+#[derive(Debug, Deserialize)]
+struct Config {
+    /* IP address */
+    address: String,
+
+    /* port to listen on */
+    port: u64,
+
+    /* sled file location */
+    sled: String,
+
+    /* templates (handlebars) location */
+    templates: String,
+
+    /* Static files location */
+    wwwroot: String
+}
+/* ---- */
 
 fn get_weekday_name(i: chrono::Weekday) -> String {
     match i {
@@ -289,22 +316,42 @@ fn write_event_handler(year: u32, month: u32, day: u32, request: &rouille::Reque
 
 fn main() {
 
+    // Get options
+
     let options = App::new("Calendar")
         .arg(Arg::with_name("file")
-            .long("file")
+            .index(1)
             .value_name("FILE")
-            .help("Sled database file")
-            .required(false)
+            .help("TOML config")
+            .required(true)
             .takes_value(true))
         .get_matches();
 
-    // Setup Sled
 
-    let sled_file = options.value_of("file").unwrap_or(PATH);
+
+    // Read configuration
+
+    let filename = options.value_of("file").unwrap();
+    
+    let mut file = File::open(filename).unwrap();
+    let mut contents = String::new();
+    file.read_to_string(&mut contents).unwrap();
+
+    let config: Config = toml::from_str(&contents).unwrap();
+
+    let address = config.address.to_owned();
+    let port = config.port.to_owned();
+    let sled_location: String = config.sled.to_owned();
+    let templates_location: String = config.templates.to_owned();
+    let wwwroot_location: String = config.wwwroot.to_owned();
+
+
+
+    // Setup Sled
 
     let sled_config = ConfigBuilder::new()
         .temporary(false)
-        .path(sled_file)
+        .path(sled_location)
         .build();
 
     let tree = Some(Tree::start(sled_config).unwrap());
@@ -312,18 +359,29 @@ fn main() {
     TREE.set(tree.unwrap()).unwrap();
 
 
+
+
     // Setup Handlebars
 
     let mut handlebars: handlebars::Handlebars = Handlebars::new();
-    handlebars.register_template_file("month", "./templates//index.hbs").unwrap();
+
+    let index = templates_location + "//index.hbs";
+
+    handlebars.register_template_file("month", index).unwrap();
 
     HBS.set(handlebars).unwrap();
 
+
+
     // Start server
 
-    rouille::start_server("127.0.0.1:8000", move |request| {
+    let addr = address + ":" + &port.to_string();
+
+    println!("Started server on {}", addr);
+
+    rouille::start_server(addr, move |request| {
     
-        let response = rouille::match_assets(&request, "./static/");
+        let response = rouille::match_assets(&request, &config.wwwroot);
 
         if response.is_success() {
             return response;

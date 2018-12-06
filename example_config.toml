@@ -1,0 +1,14 @@
+# IP address
+address = "127.0.0.1"
+
+# port to listen on
+port = 8000
+
+# sled file location
+sled = "./mcal_db.sled"
+
+# templates (handlebars) location
+templates = "./templates"
+
+# static files location
+wwwroot = "./static"
