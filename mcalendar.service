@@ -1,0 +1,13 @@
+[Unit]
+Description = mcalendar
+After = network.target
+
+[Service]
+Type = simple
+User = malky
+WorkingDirectory = /home/malky
+ExecStart = mcalendar /home/malky/mcalendar_config.toml
+Restart = always
+
+[Install]
+WantedBy = multi-user.target
