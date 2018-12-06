@@ -3,21 +3,36 @@ extern crate chrono;
 extern crate clap;
 extern crate once_cell;
 extern crate serde;
+extern crate handlebars;
+extern crate reqwest;
 #[macro_use] extern crate serde_json;
 #[macro_use] extern crate serde_derive;
 #[macro_use] extern crate rouille;
-extern crate handlebars;
 
 use once_cell::sync::OnceCell;
 use sled::{Tree, ConfigBuilder};
 use chrono::prelude::*;
 use chrono::NaiveDate;
 use clap::{App, Arg};
-use serde_json::Value;
+use serde_json::{Value, Error};
 use handlebars::Handlebars;
 use std::io::Read;
+use std::collections::HashMap;
 
-// TODO: Split into multiple files
+/*
+TODO: 
+- REMOVE UNWRAPS, add error handling
+- logovani
+- systemd unit
+- split into multiple files
+
+Konfigurace:
+- sled file lcoation
+- templates file location
+- static files folder location
+- ip address
+- port
+*/
 
 // Default path to file persistenting key-value store.
 const PATH: &str = "./mcal_db.sled";
@@ -50,6 +65,32 @@ struct Day {
     is_non_workday: bool
 }
 
+/* -- holiday request -- */
+#[derive(Serialize, Deserialize)]
+struct Date {
+    day: u32,
+    month: u32,
+    year: u32,
+    dayOfWeek: u32
+}
+
+#[derive(Serialize, Deserialize)]
+struct LocalizedText {
+    lang: String,
+    text: String
+}
+
+#[derive(Serialize, Deserialize)]
+struct Holiday {
+    date: Date,
+    name: Vec<LocalizedText>,
+    note: Option<Vec<LocalizedText>>,
+    flags: Option<Vec<String>>,
+    holidayType: String
+}
+/* ---- */
+
+
 fn get_weekday_name(i: chrono::Weekday) -> String {
     match i {
         Weekday::Mon => String::from("Pondělí"),
@@ -80,23 +121,66 @@ fn get_month_name(m: u32) -> String {
     }
 }
 
+fn get_holidays(month: u32, year: u32) -> HashMap<u32, String> {
+
+    let mut holidays_dict = HashMap::new();
+
+    let addr: &str = &format!(
+        "https://kayaposoft.com/enrico/json/v2.0/?action=getHolidaysForMonth&month={0}&year={1}&country=cz&holidayType=public_holiday",
+        month, year);
+
+    let body = reqwest::get(addr).unwrap().text().unwrap();
+
+    let holidays: Result<Vec<Holiday>, Error> = serde_json::from_str(&body);
+
+    if let Err(_) = holidays {
+        return holidays_dict;
+    }
+
+    let mut holidays = holidays.unwrap();
+
+    for i in 0..holidays.len() {
+        let mut holiday = holidays.remove(0);
+        let day = holiday.date.day;
+
+        let mut holiday_name = "".to_string();
+
+        for j in 0..holiday.name.len() {
+            let name = holiday.name.remove(0);
+            let lang = name.lang;
+            
+            if lang == "cs" {
+                holiday_name = name.text;
+            }
+        }
+
+        holidays_dict.insert(
+            day, holiday_name
+        );
+    }
+
+    holidays_dict
+}
+
 fn read_month(month: u32, year: u32) -> Month {
 
     let month_name = get_month_name(month);
 
-    let days = get_month_days(month, year);
+    let days: Vec<NaiveDate> = get_month_days(month, year);
     
     let mut weeks: Vec<Week> = Vec::new();
 
     let mut week: Vec<Day> = Vec::new();
-    
+
+    let holidays = get_holidays(month, year);
+
     for day in days {
 
         let key = day.format(FORMAT).to_string();    
 
         let weekday: String = get_weekday_name(day.weekday());
 
-        let non_workday =
+        let mut non_workday =
             day.weekday() == Weekday::Sat ||
             day.weekday() == Weekday::Sun;
 
@@ -105,6 +189,18 @@ fn read_month(month: u32, year: u32) -> Month {
         if let Ok(Some(x)) = TREE.get().unwrap().get(&*key) {
             event = String::from(std::str::from_utf8(&x).unwrap());
         };
+
+        if holidays.contains_key(&day.day()) {
+            let holiday = holidays.get(&day.day());
+
+            if let Some(holiday) = holiday {
+                non_workday = true;
+
+                if event == "" {
+                    event = holiday.to_string();
+                }
+            }
+        }
 
         let entry = Day {
             day: day.day(),
@@ -194,14 +290,6 @@ fn write_event_handler(year: u32, month: u32, day: u32, request: &rouille::Reque
 fn main() {
 
     let options = App::new("Calendar")
-        /*
-        .arg(Arg::with_name("port")
-            .long("port")
-            .value_name("PORT")
-            .help("HTTP port to listen on")
-            .required(true)
-            .takes_value(true))
-        */
         .arg(Arg::with_name("file")
             .long("file")
             .value_name("FILE")
@@ -230,6 +318,8 @@ fn main() {
     handlebars.register_template_file("month", "./templates//index.hbs").unwrap();
 
     HBS.set(handlebars).unwrap();
+
+    // Start server
 
     rouille::start_server("127.0.0.1:8000", move |request| {
     
