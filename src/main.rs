@@ -321,7 +321,6 @@ fn main() {
     let options = App::new("Calendar")
         .arg(Arg::with_name("file")
             .index(1)
-            .value_name("FILE")
             .help("TOML config")
             .required(true)
             .takes_value(true))
