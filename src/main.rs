@@ -12,17 +12,16 @@ extern crate toml;
 
 use std::io::Read;
 use std::collections::HashMap;
-use std::env;
 use std::fs::File;
-use std::io::prelude::*;
 
 use once_cell::sync::OnceCell;
 use sled::{Tree, ConfigBuilder};
 use chrono::prelude::*;
 use chrono::NaiveDate;
 use clap::{App, Arg};
-use serde_json::{Value, Error};
+use serde_json::Value;
 use handlebars::Handlebars;
+use rouille::Response;    
 
 /*
 TODO: 
@@ -30,18 +29,7 @@ TODO:
 - logovani
 - systemd unit
 - split into multiple files
-
-Konfigurace:
-- sled file lcoation
-- templates file location
-- static files folder location
-- ip address
-- port
-*/
-
-/*
-// Default path to file persistenting key-value store.
-const PATH: &str = "./mcal_db.sled";
+- replace Sled with RDBMS
 */
 
 // Format in which is date used as key in key-value store.
@@ -73,6 +61,7 @@ struct Day {
 }
 
 /* -- holiday request -- */
+#[allow(non_snake_case)]
 #[derive(Serialize, Deserialize)]
 struct Date {
     day: u32,
@@ -87,6 +76,7 @@ struct LocalizedText {
     text: String
 }
 
+#[allow(non_snake_case)]
 #[derive(Serialize, Deserialize)]
 struct Holiday {
     date: Date,
@@ -148,48 +138,89 @@ fn get_month_name(m: u32) -> String {
     }
 }
 
+
+// Calls external web service to obtain list of
+//  public holidays for given month and year.
 fn get_holidays(month: u32, year: u32) -> HashMap<u32, String> {
 
-    let mut holidays_dict = HashMap::new();
+    let dict = {
 
-    let addr: &str = &format!(
-        "https://kayaposoft.com/enrico/json/v2.0/?action=getHolidaysForMonth&month={0}&year={1}&country=cz&holidayType=public_holiday",
-        month, year);
+        let mut dict = HashMap::new();
 
-    let body = reqwest::get(addr).unwrap().text().unwrap();
+        let addr: &str = &format!(
+            "https://kayaposoft.com/enrico/json/v2.0/?action=getHolidaysForMonth&month={0}&year={1}&country=cz&holidayType=public_holiday",
+            month, year);
 
-    let holidays: Result<Vec<Holiday>, Error> = serde_json::from_str(&body);
+        // TODO: Create and use single Reqwest client for whole app
 
-    if let Err(_) = holidays {
-        return holidays_dict;
-    }
-
-    let mut holidays = holidays.unwrap();
-
-    for i in 0..holidays.len() {
-        let mut holiday = holidays.remove(0);
-        let day = holiday.date.day;
-
-        let mut holiday_name = "".to_string();
-
-        for j in 0..holiday.name.len() {
-            let name = holiday.name.remove(0);
-            let lang = name.lang;
-            
-            if lang == "cs" {
-                holiday_name = name.text;
+        let mut body = match reqwest::get(addr) {
+            Ok(val) => val,
+            Err(msg) => {
+                println!("WARNING: Failed to request holidays for month {} and year {}.
+                    Message: {}", month, year, msg);
+                return dict;
             }
+        };
+
+        let body = match body.text() {
+            Ok(val) => val,
+            Err(msg) => {
+                println!("WARNING: Failed to request holidays for month {} and year {}.
+                    Message: {}", month, year, msg);
+                return dict;
+            }
+        };
+
+        let mut holidays: Vec<Holiday> = match serde_json::from_str(&body) {
+            Ok(val) => val,
+            Err(msg) => {
+                println!("WARNING: Failed to parse holiday response JSON for month {} and year {}.
+                    Message: {}", month, year, msg);
+                return dict;
+            }
+        };
+
+        // Rewrite using iterator or something?
+
+        for _ in 0..holidays.len() {
+
+            // Pop top element from vector
+            let mut holiday = holidays.remove(0);
+
+            // Get day number of holiday
+            let day = holiday.date.day;
+
+            let mut holiday_name = "".to_string();
+
+            // Holiday name is actually dictionary for multiple languages.
+            // We attempt to find 'cs' variant.
+            // Perhaps could be rewritted to simpler form. 
+            for _ in 0..holiday.name.len() {
+
+                // Pop top element
+                let name = holiday.name.remove(0);
+                
+                if name.lang == "cs" {
+                    holiday_name = name.text;
+                    break;
+                }
+            }
+
+            dict.insert(
+                day, holiday_name
+            );
         }
 
-        holidays_dict.insert(
-            day, holiday_name
-        );
-    }
+        dict
+    };
 
-    holidays_dict
+    dict
 }
 
 fn read_month(month: u32, year: u32) -> Month {
+
+    let tree = TREE.get()
+        .expect("OnceCell with Sled tree was empty. Aborting.");
 
     let month_name = get_month_name(month);
 
@@ -205,20 +236,31 @@ fn read_month(month: u32, year: u32) -> Month {
 
         let key = day.format(FORMAT).to_string();    
 
-        let weekday: String = get_weekday_name(day.weekday());
+        let weekday = day.weekday();
 
         let mut non_workday =
-            day.weekday() == Weekday::Sat ||
-            day.weekday() == Weekday::Sun;
+            weekday == Weekday::Sat ||
+            weekday == Weekday::Sun;
 
-        let mut event = String::from("");
+        let weekday: String = get_weekday_name(weekday);
 
-        if let Ok(Some(x)) = TREE.get().unwrap().get(&*key) {
-            event = String::from(std::str::from_utf8(&x).unwrap());
+        let day = day.day();
+
+        let mut event = match tree.get(&key) {
+            Ok(Some(val)) => {
+
+                let val = match std::str::from_utf8(&val) {
+                    Ok(val) => val.to_string(),
+                    _ => "".to_string()
+                };
+
+                val
+            },
+            _ => "".to_string()
         };
 
-        if holidays.contains_key(&day.day()) {
-            let holiday = holidays.get(&day.day());
+        if holidays.contains_key(&day) {
+            let holiday = holidays.get(&day);
 
             if let Some(holiday) = holiday {
                 non_workday = true;
@@ -230,15 +272,15 @@ fn read_month(month: u32, year: u32) -> Month {
         }
 
         let entry = Day {
-            day: day.day(),
-            weekday: weekday,
+            day: day,
+            weekday: weekday.clone(),
             event: event,
             is_non_workday: non_workday
         };
 
         week.push(entry);
 
-        if day.weekday() == Weekday::Sun {
+        if weekday == get_weekday_name(Weekday::Sun) {
             weeks.push(Week { days: week });
             week = Vec::new();
         }
@@ -262,7 +304,10 @@ fn write_event(day: u32, month: u32, year: u32, event: String) -> bool {
     let key = day.format(FORMAT).to_string();
     let value = event.into_bytes();
 
-    match TREE.get().unwrap().set(key, value) {
+    let tree = TREE.get()
+        .expect("OnceCell with Sled tree was empty. Aborting.");
+
+    match tree.set(key, value) {
         Ok(_) => true,
         Err(_) => false
     }
@@ -289,23 +334,23 @@ fn now() -> NaiveDate {
     NaiveDate::from_ymd(d.year(), d.month(), d.day())
 }
 
-fn index_handler() -> String {
+fn index_handler() -> Response {
     let now = now();
     index_month_handler(now.year() as u32, now.month())
 }
 
-fn index_month_handler(year: u32, month: u32) -> String {    
+fn index_month_handler(year: u32, month: u32) -> Response {    
     let month = read_month(month, year);
     let json_value: Value = json!(month);
     let handlebars = HBS.get().unwrap();
     let res = handlebars.render("month", &json_value).unwrap();
-    res
+    rouille::Response::html(res)
 }
 
-fn read_month_handler(year: u32, month: u32) -> String {
+fn read_month_handler(year: u32, month: u32) -> Response {
     let entries = read_month(month, year);
     let res = serde_json::to_string(&entries).unwrap();
-    res
+    rouille::Response::html(res)
 }
 
 fn write_event_handler(year: u32, month: u32, day: u32, request: &rouille::Request) -> () {
@@ -327,23 +372,30 @@ fn main() {
         .get_matches();
 
 
+    // Read configuration file
 
-    // Read configuration
-
-    let filename = options.value_of("file").unwrap();
+    let filename = options.value_of("file")
+        .expect("Path to configuration file is required parameter. Aborting.");
     
-    let mut file = File::open(filename).unwrap();
-    let mut contents = String::new();
-    file.read_to_string(&mut contents).unwrap();
+    let mut file = File::open(filename)
+        .expect("Couldn't open configuration file. Aborting.");
 
-    let config: Config = toml::from_str(&contents).unwrap();
+    let mut contents = String::new();        
+
+    file.read_to_string(&mut contents)
+        .expect("Couldn't read configuration file. Aborting.");
+
+    let config: Config = toml::from_str(&contents)
+        .expect("Couldn't parse configuration file. Make sure it is valid TOML. Aborting.");
+
+    // Create owned copies of configuration parameters,
+    //  so we can pass them to different functions.
 
     let address = config.address.to_owned();
     let port = config.port.to_owned();
-    let sled_location: String = config.sled.to_owned();
-    let templates_location: String = config.templates.to_owned();
-    let wwwroot_location: String = config.wwwroot.to_owned();
-
+    let sled_location = config.sled.to_owned();
+    let templates_location = config.templates.to_owned();
+    let wwwroot_location = config.wwwroot.to_owned();
 
 
     // Setup Sled
@@ -353,22 +405,29 @@ fn main() {
         .path(sled_location)
         .build();
 
-    let tree = Some(Tree::start(sled_config).unwrap());
+    let tree = Tree::start(sled_config)
+        .expect("Failed to start Sled. Aborting.");
     
-    TREE.set(tree.unwrap()).unwrap();
-
-
+    TREE.set(tree)
+        .expect("Couldn't set Sled to OnceCell, it was already used. Aborting.");
 
 
     // Setup Handlebars
 
-    let mut handlebars: handlebars::Handlebars = Handlebars::new();
+    let handlebars = {
 
-    let index = templates_location + "//index.hbs";
+        let mut handlebars = Handlebars::new();
 
-    handlebars.register_template_file("month", index).unwrap();
+        let index = templates_location + "//index.hbs";
 
-    HBS.set(handlebars).unwrap();
+        handlebars.register_template_file("month", index)
+            .expect("Failed to register template to Handlebars registry. Aborting.");
+
+        handlebars
+    };
+
+    HBS.set(handlebars)
+        .expect("Couldn't set Handlebars registry to OnceCell, it was already used. Aborting.");
 
 
 
@@ -380,26 +439,21 @@ fn main() {
 
     rouille::start_server(addr, move |request| {
     
-        let response = rouille::match_assets(&request, &config.wwwroot);
+        let response = rouille::match_assets(&request, &wwwroot_location);
 
         if response.is_success() {
             return response;
         }
 
         router!(request,
-            (GET) (/) => {
-                let res = index_handler();
-                rouille::Response::html(res)
-            },
+            (GET) (/) => { index_handler() },
 
             (GET) (/{year: u32}/{month: u32}) => {
-                let res = index_month_handler(year, month);
-                rouille::Response::html(res)
+                index_month_handler(year, month)
             },
 
             (GET) (/read-month/{year: u32}/{month: u32}) => {
-                let res = read_month_handler(year, month);
-                rouille::Response::html(res)
+                read_month_handler(year, month)
             },
 
             (POST) (/write-event/{year: u32}/{month: u32}/{day: u32}) => {
