@@ -2,5 +2,6 @@
 Cargo.lock
 **/*.rs.bk
 
+**/*.sled
 
 .rpm/*
