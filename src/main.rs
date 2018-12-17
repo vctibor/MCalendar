@@ -26,10 +26,14 @@ use rouille::Response;
 /*
 TODO: 
 - REMOVE UNWRAPS, add error handling
+- use human_panic crate
 - logovani
 - systemd unit
 - split into multiple files
-- replace Sled with RDBMS
+- replace Sled with postgres+diesel
+- try compile using musl libc and deploy to centos
+- clippy
+- rewrite using yew and webasm
 */
 
 // Format in which is date used as key in key-value store.
