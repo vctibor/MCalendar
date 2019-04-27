@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use std::fs::File;
 
 use once_cell::sync::OnceCell;
-use sled::{Tree, ConfigBuilder};
+use sled::{ConfigBuilder, Db};
 use chrono::prelude::*;
 use chrono::NaiveDate;
 use clap::{App, Arg};
@@ -28,18 +28,14 @@ TODO:
 - REMOVE UNWRAPS, add error handling
 - use human_panic crate
 - logovani
-- systemd unit
 - split into multiple files
-- replace Sled with postgres+diesel
-- try compile using musl libc and deploy to centos
-- clippy
-- rewrite using yew and webasm
+- replace Sled with postgres
 */
 
 // Format in which is date used as key in key-value store.
 const FORMAT: &str = "%Y-%m-%d";
 
-static TREE: OnceCell<sled::Tree> = OnceCell::INIT;
+static TREE: OnceCell<sled::Db> = OnceCell::INIT;
 
 static HBS: OnceCell<Handlebars> = OnceCell::INIT;
 
@@ -409,11 +405,17 @@ fn main() {
         .path(sled_location)
         .build();
 
+    /*
     let tree = Tree::start(sled_config)
         .expect("Failed to start Sled. Aborting.");
+        */
+
+    let tree = Db::start(sled_config)
+        .expect("Failed to start Sled. Aborting.");
     
-    TREE.set(tree)
-        .expect("Couldn't set Sled to OnceCell, it was already used. Aborting.");
+    TREE.set(tree);
+        //.expect("Couldn't set Sled to OnceCell, it was already used. Aborting.");
+        //.unwrap();
 
 
     // Setup Handlebars
