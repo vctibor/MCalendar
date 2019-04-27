@@ -1,14 +1,14 @@
 # IP address
-address = "127.0.0.1"
+address = "0.0.0.0"
 
 # port to listen on
 port = 8000
 
 # sled file location
-sled = "./mcal_db.sled"
+sled = "/var/mcalendar/mcalendar.sled"
 
 # templates (handlebars) location
-templates = "./templates"
+templates = "/var/mcalendar/templates"
 
 # static files location
-wwwroot = "./static"
+wwwroot = "/var/mcalendar/static"

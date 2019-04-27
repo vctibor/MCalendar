@@ -1,13 +1,22 @@
-FROM ubuntu
+FROM centos
 
-COPY mcalendar mcalendar
 
-COPY mcalendar_config.toml mcalendar_config.toml
+# Prepare system
 
-COPY mcalendar.sled mcalendar.sled
+RUN yum update -y
 
-RUN chmod +x mcalendar
+RUN yum install -y openssl openssl-devel
+
+RUN mkdir /var/mcalendar
+
+RUN mkdir /var/mcalendar/mcalendar.sled
+
+
+# Copy required files
+
+ADD mcalendar.tar /var/mcalendar
+
 
 EXPOSE 8000
 
-CMD ["./mcalendar"]
+CMD ["/var/mcalendar/mcalendar", "/var/mcalendar/config.toml"]
