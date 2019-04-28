@@ -25,4 +25,13 @@ rm -rf ./mcalendar.tar
 
 docker rm -f -v mcal
 
-docker run --rm --name mcal --restart unless-stopped -p 8000:8000 -d -v /home/malky/mcalendar.sled:/var/mcalendar/mcalendar.sled  mcalendar
+docker run --name mcal --restart unless-stopped \
+	-p 8000:8000 -d \
+	-v /home/malky/mcalendar.sled:/var/mcalendar/mcalendar.sled \
+	mcalendar
+
+sudo firewall-cmd --zone=public --add-port=8000/tcp --permanent
+
+sudo firewall-cmd --reload
+
+docker container ls
