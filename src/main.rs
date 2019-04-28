@@ -1,4 +1,3 @@
-extern crate sled;
 extern crate chrono;
 extern crate clap;
 extern crate once_cell;
@@ -6,6 +5,7 @@ extern crate serde;
 extern crate handlebars;
 extern crate reqwest;
 extern crate toml;
+extern crate postgres;
 #[macro_use] extern crate serde_json;
 #[macro_use] extern crate serde_derive;
 #[macro_use] extern crate rouille;
@@ -15,13 +15,23 @@ use std::collections::HashMap;
 use std::fs::File;
 
 use once_cell::sync::OnceCell;
-use sled::{ConfigBuilder, Db};
 use chrono::prelude::*;
 use chrono::NaiveDate;
 use clap::{App, Arg};
 use serde_json::Value;
 use handlebars::Handlebars;
 use rouille::Response;    
+
+use postgres::{Connection, TlsMode};
+
+mod data_access;
+mod model;
+
+use data_access::*;
+
+use model::*;
+
+
 
 /*
 TODO: 
@@ -42,81 +52,10 @@ panic se smysluplnou chybovou hlaskou
 
 */
 
-// Format in which is date used as key in key-value store.
-const FORMAT: &str = "%Y-%m-%d";
-
-static TREE: OnceCell<sled::Db> = OnceCell::INIT;
-
 static HBS: OnceCell<Handlebars> = OnceCell::INIT;
 
-#[derive(Serialize, Deserialize)]
-struct Month {
-    month: u32,
-    year: u32,
-    name: String,
-    weeks: Vec<Week>
-}
+static CONN_STR: OnceCell<String> = OnceCell::INIT;
 
-#[derive(Serialize, Deserialize)]
-struct Week {
-    days: Vec<Day>
-}
-
-#[derive(Serialize, Deserialize)]
-struct Day {
-    day: u32,
-    weekday: String,
-    event: String,
-    is_non_workday: bool
-}
-
-/* -- holiday request -- */
-#[allow(non_snake_case)]
-#[derive(Serialize, Deserialize)]
-struct Date {
-    day: u32,
-    month: u32,
-    year: u32,
-    dayOfWeek: u32
-}
-
-#[derive(Serialize, Deserialize)]
-struct LocalizedText {
-    lang: String,
-    text: String
-}
-
-#[allow(non_snake_case)]
-#[derive(Serialize, Deserialize)]
-struct Holiday {
-    date: Date,
-    name: Vec<LocalizedText>,
-    note: Option<Vec<LocalizedText>>,
-    flags: Option<Vec<String>>,
-    holidayType: String
-}
-/* ---- */
-
-
-/* -- configuration -- */
-#[derive(Debug, Deserialize)]
-struct Config {
-    /* IP address */
-    address: String,
-
-    /* port to listen on */
-    port: u64,
-
-    /* sled file location */
-    sled: String,
-
-    /* templates (handlebars) location */
-    templates: String,
-
-    /* Static files location */
-    wwwroot: String
-}
-/* ---- */
 
 fn get_weekday_name(i: chrono::Weekday) -> String {
     match i {
@@ -229,8 +168,9 @@ fn get_holidays(month: u32, year: u32) -> HashMap<u32, String> {
 
 fn read_month(month: u32, year: u32) -> Month {
 
-    let tree = TREE.get()
-        .expect("OnceCell with Sled tree was empty. Aborting.");
+    let conn_str =  CONN_STR.get().unwrap();
+    let conn: Connection = Connection::connect(conn_str.clone(), TlsMode::None).unwrap();
+
 
     let month_name = get_month_name(month);
 
@@ -242,9 +182,7 @@ fn read_month(month: u32, year: u32) -> Month {
 
     let holidays = get_holidays(month, year);
 
-    for day in days {
-
-        let key = day.format(FORMAT).to_string();    
+    for day in days { 
 
         let weekday = day.weekday();
 
@@ -256,18 +194,10 @@ fn read_month(month: u32, year: u32) -> Month {
 
         let day = day.day();
 
-        let mut event = match tree.get(&key) {
-            Ok(Some(val)) => {
+        let mut event: String =
+            read_event(&conn, day, month, year);
 
-                let val = match std::str::from_utf8(&val) {
-                    Ok(val) => val.to_string(),
-                    _ => "".to_string()
-                };
 
-                val
-            },
-            _ => "".to_string()
-        };
 
         if holidays.contains_key(&day) {
             let holiday = holidays.get(&day);
@@ -306,21 +236,6 @@ fn read_month(month: u32, year: u32) -> Month {
         name: month_name,
         weeks: weeks
     }    
-}
-
-fn write_event(day: u32, month: u32, year: u32, event: String) -> bool {
-    
-    let day = NaiveDate::from_ymd(year as i32, month, day);
-    let key = day.format(FORMAT).to_string();
-    let value = event.into_bytes();
-
-    let tree = TREE.get()
-        .expect("OnceCell with Sled tree was empty. Aborting.");
-
-    match tree.set(key, value) {
-        Ok(_) => true,
-        Err(_) => false
-    }
 }
 
 fn get_month_days(month: u32, year: u32) -> Vec<NaiveDate> {    
@@ -366,7 +281,11 @@ fn read_month_handler(year: u32, month: u32) -> Response {
 fn write_event_handler(year: u32, month: u32, day: u32, request: &rouille::Request) -> () {
     let mut event: String = "".to_string();
     request.data().unwrap().read_to_string(&mut event).unwrap();
-    write_event(day, month, year, event);
+
+    let conn_str =  CONN_STR.get().unwrap();
+    let conn: Connection = Connection::connect(conn_str.clone(), TlsMode::None).unwrap();
+
+    write_event(&conn, day, month, year, event);
 }
 
 fn main() {
@@ -403,25 +322,13 @@ fn main() {
 
     let address = config.address.to_owned();
     let port = config.port.to_owned();
-    let sled_location = config.sled.to_owned();
+    let connection_string = config.conn_string.to_owned();
     let templates_location = config.templates.to_owned();
     let wwwroot_location = config.wwwroot.to_owned();
 
 
-    // Setup Sled
-
-    let sled_config = ConfigBuilder::new()
-        .temporary(false)
-        .path(sled_location)
-        .build();
-
-    let tree = Db::start(sled_config)
-        .expect("Failed to start Sled. Aborting.");
-    
-    TREE.set(tree);
-        //.expect("Couldn't set Sled to OnceCell, it was already used. Aborting.");
-        //.unwrap();
-
+    CONN_STR.set(connection_string)
+        .expect("Failed to register connection string. Aborting.");
 
     // Setup Handlebars
 

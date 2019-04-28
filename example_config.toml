@@ -4,11 +4,11 @@ address = "0.0.0.0"
 # port to listen on
 port = 8000
 
-# sled file location
-sled = "./mcalendar.sled"
-
 # templates (handlebars) location
 templates = "./templates"
 
 # static files location
 wwwroot = "./static"
+
+# database connection string
+conn_string = "postgres://malky:malky@192.168.196.97:5432/mcalendar"
