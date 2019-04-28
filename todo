@@ -1,8 +1,0 @@
-error handling v mcalendar:
-
-- chyba v mainu, nonrecoverable, pred spustenim serveru ->
-panic se smysluplnou chybovou hlaskou
-
-- chyba v request handleru -> return http error
-
-- pomocne funkce -> vracet option nebo result typy

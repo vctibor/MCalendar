@@ -17,8 +17,3 @@ handlebars = "1.1.0"
 rouille = "2.2.0"
 reqwest = "0.9.15"
 toml = "0.4.9"
-
-# [package.metadata.rpm.cargo]
-# buildflags = ["--release"]
-# [package.metadata.rpm.targets]
-# mcalendar = { path = "/usr/bin/mcalendar" }

@@ -30,6 +30,16 @@ TODO:
 - logovani
 - split into multiple files
 - replace Sled with postgres
+
+error handling v mcalendar:
+
+- chyba v mainu, nonrecoverable, pred spustenim serveru ->
+panic se smysluplnou chybovou hlaskou
+
+- chyba v request handleru -> return http error
+
+- pomocne funkce -> vracet option nebo result typy
+
 */
 
 // Format in which is date used as key in key-value store.
@@ -404,11 +414,6 @@ fn main() {
         .temporary(false)
         .path(sled_location)
         .build();
-
-    /*
-    let tree = Tree::start(sled_config)
-        .expect("Failed to start Sled. Aborting.");
-        */
 
     let tree = Db::start(sled_config)
         .expect("Failed to start Sled. Aborting.");

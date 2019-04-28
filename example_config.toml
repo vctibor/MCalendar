@@ -5,10 +5,10 @@ address = "0.0.0.0"
 port = 8000
 
 # sled file location
-sled = "/var/mcalendar/mcalendar.sled"
+sled = "./mcalendar.sled"
 
 # templates (handlebars) location
-templates = "/var/mcalendar/templates"
+templates = "./templates"
 
 # static files location
-wwwroot = "/var/mcalendar/static"
+wwwroot = "./static"

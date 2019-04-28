@@ -6,7 +6,7 @@ cargo build --release
 
 cp ../target/release/mcalendar .
 
-cp ../example_config.toml config.toml
+# cp ../example_config.toml config.toml
 
 cp -r ../static .
 
@@ -18,6 +18,11 @@ scp -r malky@192.168.1.2:/home/malky/mcalendar.sled /home/malky/
 
 docker build -t mcalendar .
 
+rm -rf ./static
+rm -rf ./templates
+rm -rf ./mcalendar
+rm -rf ./mcalendar.tar
+
 docker rm -f -v mcal
 
-docker run --rm --name mcal -p 8000:8000 -d -v /home/malky/mcalendar.sled:/var/mcalendar/mcalendar.sled  mcalendar
+docker run --rm --name mcal --restart unless-stopped -p 8000:8000 -d -v /home/malky/mcalendar.sled:/var/mcalendar/mcalendar.sled  mcalendar
