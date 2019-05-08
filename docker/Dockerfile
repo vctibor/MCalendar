@@ -9,8 +9,6 @@ RUN yum install -y openssl openssl-devel
 
 RUN mkdir /var/mcalendar
 
-RUN mkdir /var/mcalendar/mcalendar.sled
-
 
 # Copy required files
 
