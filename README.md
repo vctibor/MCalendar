@@ -8,11 +8,11 @@ Web based calendar following KISS principle, as minimalist as possible.
 
  - Weekend and holiday dates are highlighted with different color. Holidays for Czechia are fetched from third-party service. If there's no string associated with holiday date, holiday name is displayed in its place.
 
- ## TODO
+## TODO
 
  - Highlight current day with different color.
 
- ## Technical details
+## Technical details
 
 Written in Rust, using Postgres database.
 
