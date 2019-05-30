@@ -92,76 +92,71 @@ fn get_month_name(m: u32) -> String {
 //  public holidays for given month and year.
 fn get_holidays(month: u32, year: u32) -> HashMap<u32, String> {
 
-    let dict = {
+    let mut dict = HashMap::new();
 
-        let mut dict = HashMap::new();
+    let addr: &str = &format!(
+        "https://kayaposoft.com/enrico/json/v2.0/?action=getHolidaysForMonth&month={0}&year={1}&country=cz&holidayType=public_holiday",
+        month, year);
 
-        let addr: &str = &format!(
-            "https://kayaposoft.com/enrico/json/v2.0/?action=getHolidaysForMonth&month={0}&year={1}&country=cz&holidayType=public_holiday",
-            month, year);
+    // TODO: Create and use single Reqwest client for whole app
 
-        // TODO: Create and use single Reqwest client for whole app
+    let mut body = match reqwest::get(addr) {
+        Ok(val) => val,
+        Err(msg) => {
+            println!("WARNING: Failed to request holidays for month {} and year {}.
+                Message: {}", month, year, msg);
+            return dict;
+        }
+    };
 
-        let mut body = match reqwest::get(addr) {
-            Ok(val) => val,
-            Err(msg) => {
-                println!("WARNING: Failed to request holidays for month {} and year {}.
-                    Message: {}", month, year, msg);
-                return dict;
+    let body = match body.text() {
+        Ok(val) => val,
+        Err(msg) => {
+            println!("WARNING: Failed to request holidays for month {} and year {}.
+                Message: {}", month, year, msg);
+            return dict;
+        }
+    };
+
+    let mut holidays: Vec<Holiday> = match serde_json::from_str(&body) {
+        Ok(val) => val,
+        Err(msg) => {
+            println!("WARNING: Failed to parse holiday response JSON for month {} and year {}.
+                Message: {}", month, year, msg);
+            return dict;
+        }
+    };
+
+    // Rewrite using iterator or something?
+
+    for _ in 0..holidays.len() {
+
+        // Pop top element from vector
+        let mut holiday = holidays.remove(0);
+
+        // Get day number of holiday
+        let day = holiday.date.day;
+
+        let mut holiday_name = "".to_string();
+
+        // Holiday name is actually dictionary for multiple languages.
+        // We attempt to find 'cs' variant.
+        // Perhaps could be rewritted to simpler form. 
+        for _ in 0..holiday.name.len() {
+
+            // Pop top element
+            let name = holiday.name.remove(0);
+            
+            if name.lang == "cs" {
+                holiday_name = name.text;
+                break;
             }
-        };
-
-        let body = match body.text() {
-            Ok(val) => val,
-            Err(msg) => {
-                println!("WARNING: Failed to request holidays for month {} and year {}.
-                    Message: {}", month, year, msg);
-                return dict;
-            }
-        };
-
-        let mut holidays: Vec<Holiday> = match serde_json::from_str(&body) {
-            Ok(val) => val,
-            Err(msg) => {
-                println!("WARNING: Failed to parse holiday response JSON for month {} and year {}.
-                    Message: {}", month, year, msg);
-                return dict;
-            }
-        };
-
-        // Rewrite using iterator or something?
-
-        for _ in 0..holidays.len() {
-
-            // Pop top element from vector
-            let mut holiday = holidays.remove(0);
-
-            // Get day number of holiday
-            let day = holiday.date.day;
-
-            let mut holiday_name = "".to_string();
-
-            // Holiday name is actually dictionary for multiple languages.
-            // We attempt to find 'cs' variant.
-            // Perhaps could be rewritted to simpler form. 
-            for _ in 0..holiday.name.len() {
-
-                // Pop top element
-                let name = holiday.name.remove(0);
-                
-                if name.lang == "cs" {
-                    holiday_name = name.text;
-                    break;
-                }
-            }
-
-            dict.insert(
-                day, holiday_name
-            );
         }
 
-        dict
-    };
+        dict.insert(
+            day, holiday_name
+        );
+    }
 
     dict
 }
@@ -197,8 +192,6 @@ fn read_month(month: u32, year: u32) -> Month {
         let mut event: String =
             read_event(&conn, day, month, year);
 
-
-
         if holidays.contains_key(&day) {
             let holiday = holidays.get(&day);
 
@@ -212,9 +205,9 @@ fn read_month(month: u32, year: u32) -> Month {
         }
 
         let entry = Day {
-            day: day,
+            day,
             weekday: weekday.clone(),
-            event: event,
+            event,
             is_non_workday: non_workday
         };
 
@@ -226,32 +219,31 @@ fn read_month(month: u32, year: u32) -> Month {
         }
     }
 
-    if week.len() != 0 {
+    if !week.is_empty() {
         weeks.push(Week { days: week });
     }
     
     Month {
-        month: month,
-        year: year,
+        month,
+        year,
         name: month_name,
-        weeks: weeks
+        weeks
     }    
 }
 
 fn get_month_days(month: u32, year: u32) -> Vec<NaiveDate> {    
     let mut days = Vec::<NaiveDate>::new();    
-    let mut dt = NaiveDate::from_ymd(year as i32, month, 01);
+    let mut dt = NaiveDate::from_ymd(year as i32, month, 1);
 
     loop {
-        days.push(dt.clone());
+        days.push(dt);
         dt = dt.succ();
         if dt.month() != month {
             break;
         }
     }
-
-    let days = days;
-    return days;
+    
+    days
 }
 
 fn now() -> NaiveDate {
@@ -278,7 +270,12 @@ fn read_month_handler(year: u32, month: u32) -> Response {
     rouille::Response::html(res)
 }
 
-fn write_event_handler(year: u32, month: u32, day: u32, request: &rouille::Request) -> () {
+fn write_event_handler(
+    year: u32,
+    month: u32,
+    day: u32,
+    request: &rouille::Request)
+{
     let mut event: String = "".to_string();
     request.data().unwrap().read_to_string(&mut event).unwrap();
 

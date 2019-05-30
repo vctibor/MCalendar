@@ -18,12 +18,12 @@ pub fn read_event(conn: &Connection, day: u32, month: u32, year: u32) -> String 
     let result: &postgres::rows::Rows =
         &conn.query(&query, &[]).expect("Read database failed.");
 
-    if result.len() > 0 {
+    if !result.is_empty() {
         let event: String = result.get(0).get(0);
         return event;
     }
 
-    return "".to_string();
+    "".to_string()
 
 }
 
