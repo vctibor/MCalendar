@@ -2,6 +2,8 @@
 
 Web based calendar following KISS principle, as minimalist as possible.
 
+![Screenshot](./screenshot.png?raw=true "Screenshot")
+
 ## Features
 
  - Assign single string to any date. Display all days in given month with their strings if any.
@@ -11,6 +13,8 @@ Web based calendar following KISS principle, as minimalist as possible.
 ## TODO
 
  - Highlight current day with different color.
+
+ - On Enter key write all strings (currently only selected row).
 
 ## Technical details
 
