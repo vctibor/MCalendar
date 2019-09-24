@@ -20,7 +20,7 @@ rm -rf ./mcalendar.tar
 docker rm -f -v mcal
 
 docker run --name mcal --restart unless-stopped \
-	-p 8000:8000 -d mcalendar
+	-p 192.168.196.97:8000:8000 -d mcalendar
 
 sudo firewall-cmd --zone=public --add-port=8000/tcp --permanent
 
