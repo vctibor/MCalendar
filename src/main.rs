@@ -95,7 +95,7 @@ fn get_holidays(month: u32, year: u32) -> HashMap<u32, String> {
     let mut dict = HashMap::new();
 
     let addr: &str = &format!(
-        "https://kayaposoft.com/enrico/json/v2.0/?action=getHolidaysForMonth&month={0}&year={1}&country=cz&holidayType=public_holiday",
+        "http://kayaposoft.com/enrico/json/v2.0/?action=getHolidaysForMonth&month={0}&year={1}&country=cz",
         month, year);
 
     // TODO: Create and use single Reqwest client for whole app
