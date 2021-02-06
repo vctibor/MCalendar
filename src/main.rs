@@ -15,8 +15,8 @@ use std::collections::HashMap;
 use std::fs::File;
 
 use once_cell::sync::OnceCell;
-use chrono::prelude::*;
-use chrono::NaiveDate;
+
+use chrono::{NaiveDate, Datelike, Local};
 use clap::{App, Arg};
 use serde_json::Value;
 use handlebars::Handlebars;
@@ -58,14 +58,15 @@ static CONN_STR: OnceCell<String> = OnceCell::INIT;
 
 
 fn get_weekday_name(i: chrono::Weekday) -> String {
+    use chrono::Weekday::*;
     match i {
-        Weekday::Mon => String::from("Pondělí"),
-        Weekday::Tue => String::from("Úterý"),
-        Weekday::Wed => String::from("Středa"),
-        Weekday::Thu => String::from("Čtvrtek"),
-        Weekday::Fri => String::from("Pátek"),
-        Weekday::Sat => String::from("Sobota"),
-        Weekday::Sun => String::from("Neděle")
+        Mon => String::from("Pondělí"),
+        Tue => String::from("Úterý"),
+        Wed => String::from("Středa"),
+        Thu => String::from("Čtvrtek"),
+        Fri => String::from("Pátek"),
+        Sat => String::from("Sobota"),
+        Sun => String::from("Neděle")
     }
 }
 
@@ -182,8 +183,8 @@ fn read_month(month: u32, year: u32) -> Month {
         let weekday = day.weekday();
 
         let mut non_workday =
-            weekday == Weekday::Sat ||
-            weekday == Weekday::Sun;
+            weekday == chrono::Weekday::Sat ||
+            weekday == chrono::Weekday::Sun;
 
         let weekday: String = get_weekday_name(weekday);
 
@@ -213,7 +214,7 @@ fn read_month(month: u32, year: u32) -> Month {
 
         week.push(entry);
 
-        if weekday == get_weekday_name(Weekday::Sun) {
+        if weekday == get_weekday_name(chrono::Weekday::Sun) {
             weeks.push(Week { days: week });
             week = Vec::new();
         }
