@@ -1,7 +1,7 @@
-FROM rust_builder AS builder
+FROM vladimirmalky/rust_builder AS builder
 
 RUN apt-get update && \
-    apt-get upgrade && \
+    apt-get upgrade -y && \
     apt-get install -y openssl libssl-dev build-essential pkg-config
 
 RUN mkdir /root/mcalendar
@@ -17,7 +17,7 @@ RUN cd ~/mcalendar/ && ~/.cargo/bin/cargo build --release
 FROM debian
 
 RUN apt-get update && \
-    apt-get upgrade && \
+    apt-get upgrade -y && \
     apt-get install -y openssl  
 
 RUN mkdir /var/mcalendar/
