@@ -1,6 +1,7 @@
 # MCalendar
 
-Web based calendar following KISS principle, as minimalist as possible.
+Web based calendar following KISS principle, as minimalist as possible. Fullstack Rust application, using [seed](https://seed-rs.org/) for frontend and [actix-web](https://actix.rs/) for backend.
+
 
 ![Screenshot](./screenshot.png?raw=true "Screenshot")
 
@@ -12,7 +13,7 @@ Web based calendar following KISS principle, as minimalist as possible.
 
 ## Setup
 
-### Setup using Dockerfile
+### Setup using Dockerfile
 
 You have to build Dockerfile on your local machine.
 
@@ -54,3 +55,27 @@ Start Docker image. By default it will listen on port 8000.
 Written in Rust, using Postgres database.
 
 Licensed under terms of GPLv3 license.
+
+## Fullstack Rust web application
+
+See also [Rust fullstack single binary example](https://github.com/vctibor/seed_fullstack).
+
+### Client
+
+Checkout [quickstart](https://github.com/seed-rs/seed-quickstart) and [counter example](https://github.com/seed-rs/seed/tree/master/examples/counter).
+
+    cargo make watch
+
+    cargo make serve
+
+### Server
+
+Based on https://github.com/seed-rs/seed/blob/master/examples/server_integration/server/src/main.rs.
+
+### Build
+
+In client:
+
+    cargo make verify
+
+    cargo make build_release
