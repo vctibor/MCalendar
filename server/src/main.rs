@@ -231,14 +231,14 @@ fn now() -> NaiveDate {
 
 
 /// Get events for given month in given year.
-#[get("/{year}/{month}")]
+#[get("/api/{year}/{month}")]
 async fn get_events(web::Path((year, month)): web::Path<(u32, u32)>) -> Result<String>
 {
     Ok(read_month(month, year).await.to_json())
 }
 
 /// Write events for given month in given year.
-#[post("/{year}/{month}")]
+#[post("/api/{year}/{month}")]
 async fn write_events(web::Path((year, month)): web::Path<(u32, u32)>) -> Result<String>
 {
 
