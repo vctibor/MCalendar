@@ -3,14 +3,14 @@
 // #[macro_use] extern crate rouille;
 // 
 // use std::io::Read;
-// use std::collections::HashMap;
+// 
 // use std::fs::File;
 // 
 // use once_cell::sync::OnceCell;
 // 
-// use chrono::{NaiveDate, Datelike, Local};
+// 
 // use clap::{App, Arg};
-// use serde_json::Value;
+use serde_json;
 // use handlebars::Handlebars;
 // use rouille::Response;    
 // 
@@ -22,40 +22,17 @@
 // use data_access::*;
 // use model::*;
 
-use actix_files::{Files, NamedFile};
-use actix_web::{web, App, HttpServer, Result, Error};
-use actix_web::web::{scope, resource, get, post};
-use actix_web::HttpResponse;
-use actix_web_static_files::ResourceFiles;
+use std::collections::HashMap;
 
-use serde::{Serialize, Deserialize};
+use actix_web::{web, App, HttpServer, Result};
+use actix_web_static_files::ResourceFiles;
+use actix_web::{get, post};
+
+use chrono::{NaiveDate, Datelike, Local};
+
+use shared::*;
 
 include!(concat!(env!("OUT_DIR"), "/generated.rs"));
-
-/*
-TODO: 
-- REMOVE UNWRAPS, add error handling
-- use human_panic crate
-- logovani
-- split into multiple files
-- replace Sled with postgres
-
-error handling v mcalendar:
-
-- chyba v mainu, nonrecoverable, pred spustenim serveru ->
-panic se smysluplnou chybovou hlaskou
-
-- chyba v request handleru -> return http error
-
-- pomocne funkce -> vracet option nebo result typy
-
-*/
-
-/*
-static HBS: OnceCell<Handlebars> = OnceCell::INIT;
-
-static CONN_STR: OnceCell<String> = OnceCell::INIT;
-
 
 fn get_weekday_name(i: chrono::Weekday) -> String {
     use chrono::Weekday::*;
@@ -88,10 +65,9 @@ fn get_month_name(m: u32) -> String {
     }
 }
 
-
-// Calls external web service to obtain list of
-//  public holidays for given month and year.
-fn get_holidays(month: u32, year: u32) -> HashMap<u32, String> {
+/*
+/// Calls external web service to obtain list of public holidays for given month and year.
+async fn get_holidays(month: u32, year: u32) -> HashMap<u32, String> {
 
     let mut dict = HashMap::new();
 
@@ -99,9 +75,9 @@ fn get_holidays(month: u32, year: u32) -> HashMap<u32, String> {
         "http://kayaposoft.com/enrico/json/v2.0/?action=getHolidaysForMonth&month={0}&year={1}&country=cz",
         month, year);
 
-    // TODO: Create and use single Reqwest client for whole app
+    let response = reqwest::get(addr).await;
 
-    let mut body = match reqwest::get(addr) {
+    let mut body = match response {
         Ok(val) => val,
         Err(msg) => {
             println!("WARNING: Failed to request holidays for month {} and year {}.
@@ -110,7 +86,7 @@ fn get_holidays(month: u32, year: u32) -> HashMap<u32, String> {
         }
     };
 
-    let body = match body.text() {
+    let body = match body.text().await {
         Ok(val) => val,
         Err(msg) => {
             println!("WARNING: Failed to request holidays for month {} and year {}.
@@ -127,8 +103,6 @@ fn get_holidays(month: u32, year: u32) -> HashMap<u32, String> {
             return dict;
         }
     };
-
-    // Rewrite using iterator or something?
 
     for _ in 0..holidays.len() {
 
@@ -161,11 +135,12 @@ fn get_holidays(month: u32, year: u32) -> HashMap<u32, String> {
 
     dict
 }
+*/
 
-fn read_month(month: u32, year: u32) -> Month {
+async fn read_month(month: u32, year: u32) -> Month {
 
-    let conn_str =  CONN_STR.get().unwrap();
-    let conn: Connection = Connection::connect(conn_str.clone(), TlsMode::None).unwrap();
+    //let conn_str = CONN_STR.get().unwrap();
+    //let conn: Connection = Connection::connect(conn_str.clone(), TlsMode::None).unwrap();
 
 
     let month_name = get_month_name(month);
@@ -176,7 +151,7 @@ fn read_month(month: u32, year: u32) -> Month {
 
     let mut week: Vec<Day> = Vec::new();
 
-    let holidays = get_holidays(month, year);
+    //let holidays = get_holidays(month, year).await;
 
     for day in days { 
 
@@ -190,9 +165,10 @@ fn read_month(month: u32, year: u32) -> Month {
 
         let day = day.day();
 
-        let mut event: String =
-            read_event(&conn, day, month, year);
+        // let mut event = read_event(&conn, day, month, year);
+        let mut event = "".to_owned();
 
+        /*
         if holidays.contains_key(&day) {
             let holiday = holidays.get(&day);
 
@@ -204,7 +180,8 @@ fn read_month(month: u32, year: u32) -> Month {
                 }
             }
         }
-
+        */
+        
         let entry = Day {
             day,
             weekday: weekday.clone(),
@@ -252,158 +229,45 @@ fn now() -> NaiveDate {
     NaiveDate::from_ymd(d.year(), d.month(), d.day())
 }
 
-fn index_handler() -> Response {
-    let now = now();
-    index_month_handler(now.year() as u32, now.month())
+
+/// Get events for given month in given year.
+#[get("/{year}/{month}")]
+async fn get_events(web::Path((year, month)): web::Path<(u32, u32)>) -> Result<String>
+{
+    Ok(read_month(month, year).await.to_json())
 }
 
-fn index_month_handler(year: u32, month: u32) -> Response {    
+/// Write events for given month in given year.
+#[post("/{year}/{month}")]
+async fn write_events(web::Path((year, month)): web::Path<(u32, u32)>) -> Result<String>
+{
+
+    /*
     let month = read_month(month, year);
     let json_value: Value = json!(month);
     let handlebars = HBS.get().unwrap();
     let res = handlebars.render("month", &json_value).unwrap();
-    rouille::Response::html(res)
-}
-
-fn read_month_handler(year: u32, month: u32) -> Response {
-    let entries = read_month(month, year);
-    let res = serde_json::to_string(&entries).unwrap();
-    rouille::Response::html(res)
-}
-
-fn write_event_handler(
-    year: u32,
-    month: u32,
-    day: u32,
-    request: &rouille::Request)
-{
-    let mut event: String = "".to_string();
-    request.data().unwrap().read_to_string(&mut event).unwrap();
-
-    let conn_str =  CONN_STR.get().unwrap();
-    let conn: Connection = Connection::connect(conn_str.clone(), TlsMode::None).unwrap();
-
-    write_event(&conn, day, month, year, event);
-}
-
-fn main() {
-
-    // Get options
-
-    let options = App::new("Calendar")
-        .arg(Arg::with_name("file")
-            .index(1)
-            .help("TOML config")
-            .required(true)
-            .takes_value(true))
-        .get_matches();
-
-
-    // Read configuration file
-
-    let filename = options.value_of("file")
-        .expect("Path to configuration file is required parameter. Aborting.");
+    */
     
-    let mut file = File::open(filename)
-        .expect("Couldn't open configuration file. Aborting.");
 
-    let mut contents = String::new();        
-
-    file.read_to_string(&mut contents)
-        .expect("Couldn't read configuration file. Aborting.");
-
-    let config: Config = toml::from_str(&contents)
-        .expect("Couldn't parse configuration file. Make sure it is valid TOML. Aborting.");
-
-    // Create owned copies of configuration parameters,
-    //  so we can pass them to different functions.
-
-    let address = config.address.to_owned();
-    let port = config.port.to_owned();
-    let connection_string = config.conn_string.to_owned();
-    let templates_location = config.templates.to_owned();
-    let wwwroot_location = config.wwwroot.to_owned();
-
-
-    CONN_STR.set(connection_string)
-        .expect("Failed to register connection string. Aborting.");
-
-    // Setup Handlebars
-
-    let handlebars = {
-
-        let mut handlebars = Handlebars::new();
-
-        let index = templates_location + "//index.hbs";
-
-        handlebars.register_template_file("month", index)
-            .expect("Failed to register template to Handlebars registry. Aborting.");
-
-        handlebars
-    };
-
-    HBS.set(handlebars)
-        .expect("Couldn't set Handlebars registry to OnceCell, it was already used. Aborting.");
-
-
-
-    // Start server
-
-    let addr = address + ":" + &port.to_string();
-
-    println!("Started server on {}", addr);
-
-    rouille::start_server(addr, move |request| {
-    
-        let response = rouille::match_assets(&request, &wwwroot_location);
-
-        if response.is_success() {
-            return response;
-        }
-
-        router!(request,
-            (GET) (/) => { index_handler() },
-
-            (GET) (/{year: u32}/{month: u32}) => {
-                index_month_handler(year, month)
-            },
-
-            (GET) (/read-month/{year: u32}/{month: u32}) => {
-                read_month_handler(year, month)
-            },
-
-            (POST) (/write-event/{year: u32}/{month: u32}/{day: u32}) => {
-                write_event_handler(year, month, day, &request);                
-                rouille::Response::empty_204()
-            },
-
-            _ => rouille::Response::empty_404()
-        )
-    });
+    Ok(format!("Welcome {}, user_id {}!", year, month))
 }
-*/
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Job {
-    pub test: String
-}
-
-pub async fn index_month_handler(year: web::Path<u32>, month: web::Path<u32>, job: web::Json<Job>)
-                  -> Result<HttpResponse, Error>
-{
-    println!("index_month_handler");
-    Ok(HttpResponse::Ok().json("index_month_handler"))
-}
-
 
 #[actix_rt::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> std::io::Result<()>
+{
+    let addr = "127.0.0.1:8000";
+
+    println!("Serving on {}", addr);
+
     HttpServer::new(move || {
         let generated = generate();
         App::new()
+            .service(get_events)
+            .service(write_events)
             .service(ResourceFiles::new("/", generated))
     })
-    .bind("127.0.0.1:8000")?
+    .bind(addr)?
     .run()
     .await
 }
