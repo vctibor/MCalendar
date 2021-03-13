@@ -15,34 +15,46 @@ Web based calendar following KISS principle, as minimalist as possible. Fullstac
 
 ### Setup using Dockerfile
 
-You have to build Dockerfile on your local machine.
+You have to build Dockerfile on your local machine:
 
-You need to have PostgreSQL database running on port 5342. To change some values of connection string, such as port, username, password or database name, you will need to modify Dockerfile.
+```
+docker build -t mcalendar .
+```
+
+You need to have PostgreSQL database running on port 5342.
 
 Create user:
 
-    CREATE USER mcalendar WITH ENCRYPTED PASSWORD 'mcalendar';
+```sql
+CREATE USER mcalendar WITH ENCRYPTED PASSWORD 'mcalendar';
+```
 
 Create database `mcalendar`:
 
-    CREATE DATABASE mcalendar WITH
-        OWNER mcalendar
-        ENCODING = 'UTF8'
-        TEMPLATE template0;
+```sql
+CREATE DATABASE mcalendar WITH
+    OWNER mcalendar
+    ENCODING = 'UTF8'
+    TEMPLATE template0;
+```
 
 Switch to newly created database and create table `events`:
 
-    CREATE TABLE Events (
-        Date DATE NOT NULL,
-        Event TEXT NOT NULL,
-        PRIMARY KEY(Date)
-    );
+```sql
+CREATE TABLE Events (
+    Date DATE NOT NULL,
+    Event TEXT NOT NULL,
+    PRIMARY KEY(Date)
+);
+```
 
 Grant user priviliges for newly created database:
 
-    GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO mcalendar;
+```sql
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO mcalendar;
+```
 
-Start Docker image. By default it will listen on port 8000.
+Start Docker image. It will listen on port 9000.
 
 ## TODO
 
@@ -56,26 +68,4 @@ Written in Rust, using Postgres database.
 
 Licensed under terms of GPLv3 license.
 
-## Fullstack Rust web application
-
 See also [Rust fullstack single binary example](https://github.com/vctibor/seed_fullstack).
-
-### Client
-
-Checkout [quickstart](https://github.com/seed-rs/seed-quickstart) and [counter example](https://github.com/seed-rs/seed/tree/master/examples/counter).
-
-    cargo make watch
-
-    cargo make serve
-
-### Server
-
-Based on https://github.com/seed-rs/seed/blob/master/examples/server_integration/server/src/main.rs.
-
-### Build
-
-In client:
-
-    cargo make verify
-
-    cargo make build_release

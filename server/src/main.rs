@@ -246,7 +246,7 @@ async fn write_events(path: web::Path<(u32, u32)>) -> Result<String>
 #[actix_web::main]
 async fn main() -> std::io::Result<()>
 {
-    let addr = "127.0.0.1:9000";
+    let addr = "0.0.0.0:9000";
 
     println!("Serving on {}", addr);
 
