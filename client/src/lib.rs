@@ -1,8 +1,10 @@
 use seed::{prelude::*, *};
 use mcalendar_shared::Month;
 
+const ENTER_KEY: &str = "Enter";
+
 struct Model {
-    month: Option<Month>
+    month: Month
 }
 
 async fn fetch_month(month: u32, year: u32) -> Msg {
@@ -20,44 +22,72 @@ async fn fetch_month(month: u32, year: u32) -> Msg {
 }
 
 fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
-    // TODO: server side endpoint to get data for current date
-    orders.perform_cmd(fetch_month(3, 2021));
-    Model { month: None }
+    orders.send_msg(Msg::FetchCurrentMonth);
+    Model { month: Month::empty() }
 }
 
 #[derive(Clone)]
 enum Msg {
+    FetchCurrentMonth,
     FetchNextMonth,
     FetchPreviousMonth,
     Received(Month),
+
+    ChangeDay(usize, usize, String),
+    SubmitChanges
 }
 
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
+        Msg::FetchCurrentMonth => {
+            orders.skip();
+            orders.perform_cmd(async {
+                let url = format!("/api/current");
+                let response = fetch(url).await.expect("HTTP request failed");
+            
+                let month = response
+                    .check_status() // ensure we've got 2xx status
+                    .expect("status check failed")
+                    .json::<Month>()
+                    .await
+                    .expect("deserialization failed");
+            
+                Msg::Received(month)
+            });
+        }
+
         Msg::FetchNextMonth => {
-            match &model.month {
-                Some(month) => {
-                    let next = month.next();
-                    orders.skip();
-                    orders.perform_cmd(fetch_month(next.0, next.1));
-                }
-                None => { }
-            }
+            let next = model.month.next();
+            orders.skip();
+            orders.perform_cmd(fetch_month(next.0, next.1));
         }
 
         Msg::FetchPreviousMonth => {
-            match &model.month {
-                Some(month) => {
-                    let previous = month.previous();
-                    orders.skip();
-                    orders.perform_cmd(fetch_month(previous.0, previous.1));
-                }
-                None => { }
-            }
+            let previous = model.month.previous();
+            orders.skip();
+            orders.perform_cmd(fetch_month(previous.0, previous.1));
         }
 
         Msg::Received(received) => {
-            model.month = Some(received);
+            model.month = received;
+        }
+
+        Msg::ChangeDay(week_id, day_id, text) => {
+            model.month.weeks[week_id].days[day_id].event = text;
+        }
+
+        Msg::SubmitChanges => {
+            let url = format!("/api/{}/{}", model.month.year, model.month.month);
+
+            let request = Request::new(url)
+                .method(Method::Post)
+                .json(&model.month)
+                .expect("Serialization failed");
+
+            orders.perform_cmd(async {
+                let _response = fetch(request).await.expect("HTTP request failed");
+                Msg::FetchCurrentMonth
+            });
         }
     }
 }
@@ -88,33 +118,39 @@ fn heading(month_name: &str, year: u32) -> Node<Msg> {
 fn body(month: Month) -> Node<Msg> {
     div![
         C!["calendar"],
-
-        /*
-        <td class="col_date">{{day}}. {{../../month}}.</td>
-        <td class="col_weekday {{~#if is_non_workday}} non_working_day {{~/if~}}">{{weekday}}</td>
-        <td class="col_event">
-            <input type="text" data-day="{{day}}" value="{{event}}"/>
-        </td>
-        */
-
-        month.weeks.iter().enumerate().map(|(_week_id, week)| {
-            table![
-                week.days.iter().enumerate().map(|(_day_id, day)| {
-                    div![
-                        td![
-                            C!["col_date"], 
-                            format!("{}. {}.", day.day, month.month),
-                        ],
-                        td![
-                            C!["col_weekday"],
-                            format!("{}", day.weekday),
-                        ],
-                        td![
-                            C!["col_event"],
-                            format!("{}", day.event),
-                        ],
-                    ]
-                })
+        month.weeks.iter().enumerate().map(|(week_id, week)| {
+            div![
+                table![
+                    week.days.iter().enumerate().map(|(day_id, day)| {
+                        div![
+                            td![
+                                C!["col_date", IF!(day.is_non_workday => "non_working_day")], 
+                                format!("{}. {}.", day.day, month.month),
+                            ],
+                            td![
+                                C!["col_weekday", IF!(day.is_non_workday => "non_working_day")],
+                                format!("{}", day.weekday),
+                            ],
+                            td![
+                                C!["col_event"],
+                                input![
+                                    attrs! {
+                                        At::Value => day.event.to_owned()
+                                    },
+                                    
+                                    input_ev(Ev::Input, move |input| {
+                                        Msg::ChangeDay(week_id, day_id, input)
+                                    }),
+                                    
+                                    keyboard_ev(Ev::KeyDown, |keyboard_event| {
+                                        IF!(keyboard_event.key() == ENTER_KEY => Msg::SubmitChanges)
+                                    }),
+                                ]
+                            ],
+                        ]
+                    })
+                ],
+                br![],
             ]
         }),
         hr![],
@@ -123,15 +159,8 @@ fn body(month: Month) -> Node<Msg> {
 
 fn view(model: &Model) -> Node<Msg> {
     div![
-        if let Some(month) = model.month.clone() {
-            div![
-                heading(&month.name, month.year),
-                body(month)
-            ]
-        }
-        else {
-            div![]
-        }
+        heading(&model.month.name, model.month.year),
+        body(model.month.clone())
     ]
 }
 

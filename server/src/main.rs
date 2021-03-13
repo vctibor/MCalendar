@@ -11,6 +11,7 @@
 // 
 // use clap::{App, Arg};
 use serde_json;
+use serde::{Serialize, Deserialize};
 // use handlebars::Handlebars;
 // use rouille::Response;    
 // 
@@ -62,6 +63,31 @@ fn get_month_name(m: u32) -> String {
         12 => String::from("Prosinec"),
          _ => String::from(""),
     }
+}
+
+#[allow(non_snake_case)]
+#[derive(Serialize, Deserialize)]
+struct Holiday {
+    date: Date,
+    name: Vec<LocalizedText>,
+    note: Option<Vec<LocalizedText>>,
+    flags: Option<Vec<String>>,
+    holidayType: String
+}
+
+#[allow(non_snake_case)]
+#[derive(Serialize, Deserialize)]
+struct Date {
+    day: u32,
+    month: u32,
+    year: u32,
+    dayOfWeek: u32
+}
+
+#[derive(Serialize, Deserialize)]
+struct LocalizedText {
+    lang: String,
+    text: String
 }
 
 /// Calls external web service to obtain list of public holidays for given month and year.
@@ -218,6 +244,15 @@ fn get_month_days(month: u32, year: u32) -> Vec<NaiveDate> {
     days
 }
 
+/// Get events for current month.
+#[get("/api/current")]
+async fn get_current() -> Result<String>
+{
+    let now = Local::now().date();
+    Ok(read_month(now.month(), now.year() as u32).await.to_json())
+}
+
+
 /// Get events for given month in given year.
 #[get("/api/{year}/{month}")]
 async fn get_events(path: web::Path<(u32, u32)>) -> Result<String>
@@ -228,7 +263,7 @@ async fn get_events(path: web::Path<(u32, u32)>) -> Result<String>
 
 /// Write events for given month in given year.
 #[post("/api/{year}/{month}")]
-async fn write_events(path: web::Path<(u32, u32)>) -> Result<String>
+async fn write_events(path: web::Path<(u32, u32)>, month_events: web::Json<Month>) -> Result<String>
 {
     let (year, month) = path.into_inner();
 
@@ -239,6 +274,7 @@ async fn write_events(path: web::Path<(u32, u32)>) -> Result<String>
     let res = handlebars.render("month", &json_value).unwrap();
     */
     
+    println!("{:?}", month_events);
 
     Ok(format!("Welcome {}, user_id {}!", year, month))
 }
@@ -253,6 +289,7 @@ async fn main() -> std::io::Result<()>
     HttpServer::new(move || {
         let generated = generate();
         App::new()
+            .service(get_current)
             .service(get_events)
             .service(write_events)
             .service(ResourceFiles::new("/", generated))
