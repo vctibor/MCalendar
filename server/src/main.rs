@@ -16,17 +16,16 @@ use serde_json;
 // 
 // use postgres::{Connection, TlsMode};
 // 
-// mod data_access;
+mod data_access;
 // mod model;
 // 
-// use data_access::*;
+//use data_access::*;
 // use model::*;
 
 use std::collections::HashMap;
 
-use actix_web::{web, App, HttpServer, Result};
+use actix_web::{get, post, web, App, HttpServer, Result};
 use actix_web_static_files::ResourceFiles;
-use actix_web::{get, post};
 
 use chrono::{NaiveDate, Datelike, Local};
 
@@ -65,7 +64,6 @@ fn get_month_name(m: u32) -> String {
     }
 }
 
-/*
 /// Calls external web service to obtain list of public holidays for given month and year.
 async fn get_holidays(month: u32, year: u32) -> HashMap<u32, String> {
 
@@ -135,7 +133,6 @@ async fn get_holidays(month: u32, year: u32) -> HashMap<u32, String> {
 
     dict
 }
-*/
 
 async fn read_month(month: u32, year: u32) -> Month {
 
@@ -151,7 +148,7 @@ async fn read_month(month: u32, year: u32) -> Month {
 
     let mut week: Vec<Day> = Vec::new();
 
-    //let holidays = get_holidays(month, year).await;
+    let holidays = get_holidays(month, year).await;
 
     for day in days { 
 
@@ -165,10 +162,8 @@ async fn read_month(month: u32, year: u32) -> Month {
 
         let day = day.day();
 
-        // let mut event = read_event(&conn, day, month, year);
-        let mut event = "".to_owned();
-
-        /*
+        let mut event = data_access::read_event(day, month, year);
+        
         if holidays.contains_key(&day) {
             let holiday = holidays.get(&day);
 
@@ -180,7 +175,6 @@ async fn read_month(month: u32, year: u32) -> Month {
                 }
             }
         }
-        */
         
         let entry = Day {
             day,
@@ -232,15 +226,17 @@ fn now() -> NaiveDate {
 
 /// Get events for given month in given year.
 #[get("/api/{year}/{month}")]
-async fn get_events(web::Path((year, month)): web::Path<(u32, u32)>) -> Result<String>
+async fn get_events(path: web::Path<(u32, u32)>) -> Result<String>
 {
+    let (year, month) = path.into_inner();
     Ok(read_month(month, year).await.to_json())
 }
 
 /// Write events for given month in given year.
 #[post("/api/{year}/{month}")]
-async fn write_events(web::Path((year, month)): web::Path<(u32, u32)>) -> Result<String>
+async fn write_events(path: web::Path<(u32, u32)>) -> Result<String>
 {
+    let (year, month) = path.into_inner();
 
     /*
     let month = read_month(month, year);
