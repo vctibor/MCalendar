@@ -30,7 +30,7 @@ use actix_web::{get, post};
 
 use chrono::{NaiveDate, Datelike, Local};
 
-use shared::*;
+use mcalendar_shared::*;
 
 include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 
@@ -253,7 +253,7 @@ async fn write_events(web::Path((year, month)): web::Path<(u32, u32)>) -> Result
     Ok(format!("Welcome {}, user_id {}!", year, month))
 }
 
-#[actix_rt::main]
+#[actix_web::main]
 async fn main() -> std::io::Result<()>
 {
     let addr = "127.0.0.1:8000";

@@ -1,6 +1,6 @@
 [package]
 version = "0.1.0"
-name = "client"
+name = "mcalendar_client"
 edition = "2018"
 
 [lib]
