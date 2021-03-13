@@ -1,3 +1,9 @@
+#!/usr/bin/env sh 
+
+cd shared
+cargo build
+cd ..
+
 cd client
 rm -rf dist
 cargo make build_release

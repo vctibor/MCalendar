@@ -1,66 +1,141 @@
-// (Lines like the one below ignore selected Clippy rules
-//  - it's useful when you want to check your code with `cargo make verify`
-// but some rules are too "annoying" or are not applicable for your case.)
-#![allow(clippy::wildcard_imports)]
-
 use seed::{prelude::*, *};
+use mcalendar_shared::Month;
 
-// ------ ------
-//     Init
-// ------ ------
-
-// `init` describes what should happen when your app started.
-fn init(_: Url, _: &mut impl Orders<Msg>) -> Model {
-    Model::default()
+struct Model {
+    month: Option<Month>
 }
 
-// ------ ------
-//     Model
-// ------ ------
+async fn fetch_month(month: u32, year: u32) -> Msg {
+    let url = format!("/api/{}/{}", year, month);
+    let response = fetch(url).await.expect("HTTP request failed");
 
-// `Model` describes our app state.
-type Model = i32;
+    let month = response
+        .check_status() // ensure we've got 2xx status
+        .expect("status check failed")
+        .json::<Month>()
+        .await
+        .expect("deserialization failed");
 
-// ------ ------
-//    Update
-// ------ ------
+    Msg::Received(month)
+}
 
-// (Remove the line below once any of your `Msg` variants doesn't implement `Copy`.)
-#[derive(Copy, Clone)]
-// `Msg` describes the different events you can modify state with.
+fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
+    // TODO: server side endpoint to get data for current date
+    orders.perform_cmd(fetch_month(3, 2021));
+    Model { month: None }
+}
+
+#[derive(Clone)]
 enum Msg {
-    Increment,
+    FetchNextMonth,
+    FetchPreviousMonth,
+    Received(Month),
 }
 
-// `update` describes how to handle each `Msg`.
-fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
+fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
-        Msg::Increment => *model += 1,
+        Msg::FetchNextMonth => {
+            match &model.month {
+                Some(month) => {
+                    let next = month.next();
+                    orders.skip();
+                    orders.perform_cmd(fetch_month(next.0, next.1));
+                }
+                None => { }
+            }
+        }
+
+        Msg::FetchPreviousMonth => {
+            match &model.month {
+                Some(month) => {
+                    let previous = month.previous();
+                    orders.skip();
+                    orders.perform_cmd(fetch_month(previous.0, previous.1));
+                }
+                None => { }
+            }
+        }
+
+        Msg::Received(received) => {
+            model.month = Some(received);
+        }
     }
 }
 
-// ------ ------
-//     View
-// ------ ------
-
-// (Remove the line below once your `Model` become more complex.)
-#[allow(clippy::trivially_copy_pass_by_ref)]
-// `view` describes what to display.
-fn view(model: &Model) -> Node<Msg> {
+fn heading(month_name: &str, year: u32) -> Node<Msg> {
     div![
-        "This is a counter: ",
-        C!["counter"],
-        button![model, ev(Ev::Click, |_| Msg::Increment),],
+        C!["heading"],
+        span![
+            C!["arrow"],
+            id!["arrow_previous"],
+            ev(Ev::Click, |_| Msg::FetchPreviousMonth),
+            "◀"
+        ],
+        span![
+            C!["heading_label"],
+            format!("{} {}", month_name, year)
+        ],
+        span![
+            C!["arrow"],
+            id!["arrow_next"],
+            ev(Ev::Click, |_| Msg::FetchNextMonth),
+            "▶"
+        ],
+        hr![],
     ]
 }
 
-// ------ ------
-//     Start
-// ------ ------
+fn body(month: Month) -> Node<Msg> {
+    div![
+        C!["calendar"],
 
-// (This function is invoked by `init` function in `index.html`.)
+        /*
+        <td class="col_date">{{day}}. {{../../month}}.</td>
+        <td class="col_weekday {{~#if is_non_workday}} non_working_day {{~/if~}}">{{weekday}}</td>
+        <td class="col_event">
+            <input type="text" data-day="{{day}}" value="{{event}}"/>
+        </td>
+        */
+
+        month.weeks.iter().enumerate().map(|(_week_id, week)| {
+            table![
+                week.days.iter().enumerate().map(|(_day_id, day)| {
+                    div![
+                        td![
+                            C!["col_date"], 
+                            format!("{}. {}.", day.day, month.month),
+                        ],
+                        td![
+                            C!["col_weekday"],
+                            format!("{}", day.weekday),
+                        ],
+                        td![
+                            C!["col_event"],
+                            format!("{}", day.event),
+                        ],
+                    ]
+                })
+            ]
+        }),
+        hr![],
+    ]
+}
+
+fn view(model: &Model) -> Node<Msg> {
+    div![
+        if let Some(month) = model.month.clone() {
+            div![
+                heading(&month.name, month.year),
+                body(month)
+            ]
+        }
+        else {
+            div![]
+        }
+    ]
+}
+
 #[wasm_bindgen(start)]
-pub fn start() {
-    // Mount the `app` to the element with the `id` "app".
+pub async fn start() {
     App::start("app", init, update, view);
 }

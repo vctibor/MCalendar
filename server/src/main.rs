@@ -75,7 +75,7 @@ async fn get_holidays(month: u32, year: u32) -> HashMap<u32, String> {
 
     let response = reqwest::get(addr).await;
 
-    let mut body = match response {
+    let body = match response {
         Ok(val) => val,
         Err(msg) => {
             println!("WARNING: Failed to request holidays for month {} and year {}.
@@ -218,12 +218,6 @@ fn get_month_days(month: u32, year: u32) -> Vec<NaiveDate> {
     days
 }
 
-fn now() -> NaiveDate {
-    let d = Local::now().date();
-    NaiveDate::from_ymd(d.year(), d.month(), d.day())
-}
-
-
 /// Get events for given month in given year.
 #[get("/api/{year}/{month}")]
 async fn get_events(path: web::Path<(u32, u32)>) -> Result<String>
@@ -252,7 +246,7 @@ async fn write_events(path: web::Path<(u32, u32)>) -> Result<String>
 #[actix_web::main]
 async fn main() -> std::io::Result<()>
 {
-    let addr = "127.0.0.1:8000";
+    let addr = "127.0.0.1:9000";
 
     println!("Serving on {}", addr);
 
