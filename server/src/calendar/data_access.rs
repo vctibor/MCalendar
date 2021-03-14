@@ -33,12 +33,16 @@ pub async fn read_events(pool: &Pool<Postgres>, month: u32, year: u32) -> HashMa
         .collect()
 }
 
-pub async fn write_event(pool: &Pool<Postgres>, day: u32, month: u32, year: u32, event: String) {
-    let date = Date::try_from_ymd(year as i32, month as u8, day as u8).unwrap();
+pub async fn write_events(pool: &Pool<Postgres>, events: Vec<(Date, String)>) -> bool {
+    
+    let dates: Vec<Date> = events.clone().into_iter().map(|x| x.0).collect();
+    let events: Vec<String> = events.into_iter().map(|x| x.1).collect();
 
     sqlx::query!(
-        "insert into events (date, event) values ($1, $2) 
+        "insert into events (date, event)
+        select * from
+        unnest($1::date[], $2::text[])
         on conflict (date) do update
-        set event = $2;",
-        date, event).execute(pool).await.unwrap();
+        set event = excluded.event;",
+        &dates, &events).execute(pool).await.is_ok()
 }

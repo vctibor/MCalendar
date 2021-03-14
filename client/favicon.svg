@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="70" height="70">
+    <rect fill="rgb(34,34,34)" height="65" opacity="1" rx="4" ry="4" stroke-width="1" stroke="rgb(0,0,0)" width="65" x="5" y="0"></rect>
+    <rect fill="rgb(255,166,0)" height="10" opacity="1" rx="2" ry="2" stroke-width="1" stroke="rgb(168,102,0)" width="10" x="10" y="20"></rect>
+    <rect fill="rgb(255,166,0)" height="10" opacity="1" rx="2" ry="2" stroke-width="1" stroke="rgb(168,102,0)" width="10" x="25" y="20"></rect>
+    <rect fill="rgb(255,166,0)" height="10" opacity="1" rx="2" ry="2" stroke-width="1" stroke="rgb(168,102,0)" width="10" x="40" y="20"></rect>
+    <rect fill="rgb(255,166,0)" height="10" opacity="1" rx="2" ry="2" stroke-width="1" stroke="rgb(168,102,0)" width="10" x="55" y="20"></rect>
+    <rect fill="rgb(255,166,0)" height="10" opacity="1" rx="2" ry="2" stroke-width="1" stroke="rgb(168,102,0)" width="10" x="10" y="35"></rect>
+    <rect fill="rgb(255,166,0)" height="10" opacity="1" rx="2" ry="2" stroke-width="1" stroke="rgb(168,102,0)" width="10" x="25" y="35"></rect>
+    <rect fill="rgb(255,166,0)" height="10" opacity="1" rx="2" ry="2" stroke-width="1" stroke="rgb(168,102,0)" width="10" x="40" y="35"></rect>
+    <rect fill="rgb(255,166,0)" height="10" opacity="1" rx="2" ry="2" stroke-width="1" stroke="rgb(168,102,0)" width="10" x="55" y="35"></rect>
+    <rect fill="rgb(255,166,0)" height="10" opacity="1" rx="2" ry="2" stroke-width="1" stroke="rgb(168,102,0)" width="10" x="10" y="50"></rect>
+    <rect fill="rgb(255,166,0)" height="10" opacity="1" rx="2" ry="2" stroke-width="1" stroke="rgb(168,102,0)" width="10" x="25" y="50"></rect>
+    <rect fill="rgb(255,166,0)" height="10" opacity="1" rx="2" ry="2" stroke-width="1" stroke="rgb(168,102,0)" width="10" x="40" y="50"></rect>
+    <rect fill="rgb(255,166,0)" height="10" opacity="1" rx="2" ry="2" stroke-width="1" stroke="rgb(168,102,0)" width="10" x="55" y="50"></rect>
+</svg>

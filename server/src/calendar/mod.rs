@@ -2,6 +2,7 @@
 
 use chrono::{Local, NaiveDate, Datelike};
 use sqlx::{Pool, Postgres};
+use sqlx::types::time::Date;
 
 use mcalendar_shared::*;
 
@@ -9,8 +10,7 @@ mod holidays;
 use holidays::get_holidays;
 
 mod data_access;
-use data_access::{read_events, write_event};
-
+use data_access::{read_events, write_events};
 
 fn get_weekday_name(i: chrono::Weekday) -> String {
     use chrono::Weekday::*;
@@ -58,6 +58,7 @@ fn get_month_days(month: u32, year: u32) -> Vec<NaiveDate> {
     days
 }
 
+/// Get month with events and holidays.
 pub async fn read_month(pool: &Pool<Postgres>, month: u32, year: u32) -> Month {
 
     //let start = std::time::Instant::now();
@@ -133,12 +134,18 @@ pub async fn read_month(pool: &Pool<Postgres>, month: u32, year: u32) -> Month {
 
 /// Write events into database.
 pub async fn write_month(pool: &Pool<Postgres>, month: Month) {
-    for week in &month.weeks {
-        for day in &week.days {
-            if &day.event != "" {
-                let event = day.event.clone();
-                write_event(&pool, day.day, month.month, month.year, event).await;
-            }
-        }
-    }
+
+    let year = month.year as i32;
+    let month_number = month.month as u8;
+
+    let events: Vec<(Date, String)> = month.weeks.into_iter()
+        .fold(Vec::with_capacity(35), |acc, week| [acc, week.days].concat())
+        .into_iter()
+        .map(|x| (
+            Date::try_from_ymd(year, month_number, x.day as u8).unwrap(),
+            x.event)
+        )
+        .collect();
+
+    write_events(pool, events).await;
 }

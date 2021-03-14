@@ -5,3 +5,5 @@ Cargo.lock
 **/*.sled
 
 .rpm/*
+
+client/dist

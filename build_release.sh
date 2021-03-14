@@ -10,6 +10,7 @@ cargo make build_release
 mkdir dist
 cp index.html dist/
 cp style.css dist/
+cp favicon.svg dist/
 cp -r pkg dist/
 cd ..
 

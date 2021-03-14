@@ -1,0 +1,12 @@
+let dark_gray = #222222;
+let gold = #ffa600;
+let dark_gold = #a86600;
+
+rectangle start=[0,5] size=[65,65] color=dark_gray round-corners=4;
+
+for pos_x = 20,15,65 {
+  for pos_y = 10,15,70 {
+    rectangle start=[pos_x,pos_y] size=[10, 10] color=gold 
+      stroke-color=dark_gold round-corners=2;
+  };
+};
