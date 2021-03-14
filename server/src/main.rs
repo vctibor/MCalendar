@@ -1,22 +1,16 @@
 use std::collections::HashMap;
 use std::env;
-
 use actix_web::{get, post, web, App, HttpServer, Result};
 use actix_web_static_files::ResourceFiles;
-
 use chrono::{NaiveDate, Datelike, Local};
-
-use mcalendar_shared::*;
-
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
-
-use serde_json;
 use serde::{Serialize, Deserialize};
-
 use once_cell::sync::OnceCell;
+use mcalendar_shared::*;
 
 mod data_access;
+use data_access::{read_events, write_event};
 
 static CONN_POOL: OnceCell<Pool<Postgres>> = OnceCell::new();
 
@@ -148,23 +142,41 @@ async fn get_holidays(month: u32, year: u32) -> HashMap<u32, String> {
     dict
 }
 
+fn get_month_days(month: u32, year: u32) -> Vec<NaiveDate> {    
+    let mut days = Vec::<NaiveDate>::new();    
+    let mut dt = NaiveDate::from_ymd(year as i32, month, 1);
+
+    loop {
+        days.push(dt);
+        dt = dt.succ();
+        if dt.month() != month {
+            break;
+        }
+    }
+    
+    days
+}
+
 async fn read_month(month: u32, year: u32) -> Month {
+
+    assert!(month > 0 && month < 13, "Month must be between 1 and 12!");
+
+    //let start = std::time::Instant::now();
 
     let pool = CONN_POOL.get().unwrap();
 
+    let (mut events, holidays) = tokio::join!(
+        read_events(pool, month, year),
+        get_holidays(month, year)
+    );
 
-    data_access::read_events(pool, month, year);
-
-
-    let month_name = get_month_name(month);
+    let name = get_month_name(month);
 
     let days: Vec<NaiveDate> = get_month_days(month, year);
-    
-    let mut weeks: Vec<Week> = Vec::new();
 
-    let mut week: Vec<Day> = Vec::new();
+    let mut weeks: Vec<Week> = Vec::with_capacity(5);
 
-    let holidays = get_holidays(month, year).await;
+    let mut week: Vec<Day> = Vec::with_capacity(7);
 
     for day in days { 
 
@@ -176,10 +188,9 @@ async fn read_month(month: u32, year: u32) -> Month {
 
         let weekday: String = get_weekday_name(weekday);
 
-        let day = day.day();
+        let day: u32 = day.day();
 
-        let mut event = data_access::read_event(&pool, day, month, year).await;
-        //let mut event = "".to_owned();
+        let mut event = events.remove(&day).unwrap_or("".to_owned());
 
         if holidays.contains_key(&day) {
             let holiday = holidays.get(&day);
@@ -204,35 +215,18 @@ async fn read_month(month: u32, year: u32) -> Month {
 
         if weekday == get_weekday_name(chrono::Weekday::Sun) {
             weeks.push(Week { days: week });
-            week = Vec::new();
+            week = Vec::with_capacity(7);
         }
     }
 
     if !week.is_empty() {
         weeks.push(Week { days: week });
-    }
-    
-    Month {
-        month,
-        year,
-        name: month_name,
-        weeks
     }    
-}
 
-fn get_month_days(month: u32, year: u32) -> Vec<NaiveDate> {    
-    let mut days = Vec::<NaiveDate>::new();    
-    let mut dt = NaiveDate::from_ymd(year as i32, month, 1);
+    //let elapsed = start.elapsed();
+    //println!("read_month: {:?}", elapsed);
 
-    loop {
-        days.push(dt);
-        dt = dt.succ();
-        if dt.month() != month {
-            break;
-        }
-    }
-    
-    days
+    Month { month, year, name, weeks }
 }
 
 /// Get events for current month.
@@ -242,7 +236,6 @@ async fn get_current() -> Result<String>
     let now = Local::now().date();
     Ok(read_month(now.month(), now.year() as u32).await.to_json())
 }
-
 
 /// Get events for given month in given year.
 #[get("/api/{year}/{month}")]
@@ -264,7 +257,7 @@ async fn write_events(path: web::Path<(u32, u32)>, month_events: web::Json<Month
         for day in &week.days {
             if &day.event != "" {
                 let event = day.event.clone();
-                data_access::write_event(&pool, day.day, month, year, event).await;
+                write_event(&pool, day.day, month, year, event).await;
             }
         }
     }
@@ -278,11 +271,10 @@ async fn main() -> std::io::Result<()>
     let conn_string = env::var("DATABASE_URL").unwrap();
 
     let pg_pool = PgPoolOptions::new()
-        .max_connections(1)
+        .max_connections(2)
         .connect(&conn_string).await.unwrap();
 
     CONN_POOL.set(pg_pool).unwrap();
-
 
     let addr = "0.0.0.0:9000";
 
