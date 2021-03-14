@@ -9,6 +9,7 @@ actix-web-static-files = { git = "https://github.com/rich-murphey/actix-web-stat
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
+futures = "0.3"
 chrono = "0.4"
 reqwest = "0.11"
 once_cell = "1.7"

@@ -152,6 +152,10 @@ async fn read_month(month: u32, year: u32) -> Month {
 
     let pool = CONN_POOL.get().unwrap();
 
+
+    data_access::read_events(pool, month, year);
+
+
     let month_name = get_month_name(month);
 
     let days: Vec<NaiveDate> = get_month_days(month, year);
