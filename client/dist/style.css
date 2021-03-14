@@ -23,6 +23,7 @@ input {
   border-bottom: 1px solid #333;
   text-shadow: 2px 2px 2px #111;
   color: #aaa;
+  padding-right: 5vw;
 }
 
 table {
@@ -58,7 +59,7 @@ table {
 }
 
 .col_weekday {
-  min-width: 60px;
+  min-width: 100px;
   font-style: italic;
   width: 5%;
 }

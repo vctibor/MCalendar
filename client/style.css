@@ -58,7 +58,7 @@ table {
 }
 
 .col_weekday {
-  min-width: 60px;
+  min-width: 100px;
   font-style: italic;
   width: 5%;
 }

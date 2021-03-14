@@ -1,15 +1,16 @@
 # MCalendar
 
-Web based calendar following KISS principle, as minimalist as possible. Fullstack Rust application, using [seed](https://seed-rs.org/) for frontend and [actix-web](https://actix.rs/) for backend.
+Self-hosted calendar following KISS principle, as minimalist as possible. Fullstack Rust application, using [seed](https://seed-rs.org/) for frontend and [actix-web](https://actix.rs/) for backend.
 
-
-![Screenshot](./screenshot.png?raw=true "Screenshot")
+<img src="./screenshot.png?raw=true" style="box-shadow: 2px 2px 5px #151515;"/>
 
 ## Features
 
  - Assign single string to any date. Display all days in given month with their strings if any.
 
  - Weekend and holiday dates are highlighted with different color. Holidays for Czechia are fetched from third-party service. If there's no string associated with holiday date, holiday name is displayed in its place.
+
+ - Highlight current day with different color.
 
 ## Setup
 
@@ -62,10 +63,6 @@ docker run \
     -e DATABASE_URL="postgresql://<user>:<password>@<server>:<port>" \
     mcalendar
 ```
-
-## TODO
-
- - Highlight current day with different color.
 
 ## Technical details
 
