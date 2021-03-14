@@ -1,29 +1,5 @@
-// #[macro_use] extern crate serde_json;
-// #[macro_use] extern crate serde_derive;
-// #[macro_use] extern crate rouille;
-// 
-// use std::io::Read;
-// 
-// use std::fs::File;
-// 
-// use once_cell::sync::OnceCell;
-// 
-// 
-// use clap::{App, Arg};
-use serde_json;
-use serde::{Serialize, Deserialize};
-// use handlebars::Handlebars;
-// use rouille::Response;    
-// 
-// use postgres::{Connection, TlsMode};
-// 
-mod data_access;
-// mod model;
-// 
-//use data_access::*;
-// use model::*;
-
 use std::collections::HashMap;
+use std::env;
 
 use actix_web::{get, post, web, App, HttpServer, Result};
 use actix_web_static_files::ResourceFiles;
@@ -31,6 +7,18 @@ use actix_web_static_files::ResourceFiles;
 use chrono::{NaiveDate, Datelike, Local};
 
 use mcalendar_shared::*;
+
+use sqlx::postgres::PgPoolOptions;
+use sqlx::{Pool, Postgres};
+
+use serde_json;
+use serde::{Serialize, Deserialize};
+
+use once_cell::sync::OnceCell;
+
+mod data_access;
+
+static CONN_POOL: OnceCell<Pool<Postgres>> = OnceCell::new();
 
 include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 
@@ -162,9 +150,7 @@ async fn get_holidays(month: u32, year: u32) -> HashMap<u32, String> {
 
 async fn read_month(month: u32, year: u32) -> Month {
 
-    //let conn_str = CONN_STR.get().unwrap();
-    //let conn: Connection = Connection::connect(conn_str.clone(), TlsMode::None).unwrap();
-
+    let pool = CONN_POOL.get().unwrap();
 
     let month_name = get_month_name(month);
 
@@ -188,8 +174,9 @@ async fn read_month(month: u32, year: u32) -> Month {
 
         let day = day.day();
 
-        let mut event = data_access::read_event(day, month, year);
-        
+        let mut event = data_access::read_event(&pool, day, month, year).await;
+        //let mut event = "".to_owned();
+
         if holidays.contains_key(&day) {
             let holiday = holidays.get(&day);
 
@@ -265,23 +252,34 @@ async fn get_events(path: web::Path<(u32, u32)>) -> Result<String>
 #[post("/api/{year}/{month}")]
 async fn write_events(path: web::Path<(u32, u32)>, month_events: web::Json<Month>) -> Result<String>
 {
+    let pool = CONN_POOL.get().unwrap();
+
     let (year, month) = path.into_inner();
-
-    /*
-    let month = read_month(month, year);
-    let json_value: Value = json!(month);
-    let handlebars = HBS.get().unwrap();
-    let res = handlebars.render("month", &json_value).unwrap();
-    */
     
-    println!("{:?}", month_events);
+    for week in &month_events.weeks {
+        for day in &week.days {
+            if &day.event != "" {
+                let event = day.event.clone();
+                data_access::write_event(&pool, day.day, month, year, event).await;
+            }
+        }
+    }
 
-    Ok(format!("Welcome {}, user_id {}!", year, month))
+    Ok("".to_owned())
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()>
 {
+    let conn_string = env::var("DATABASE_URL").unwrap();
+
+    let pg_pool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(&conn_string).await.unwrap();
+
+    CONN_POOL.set(pg_pool).unwrap();
+
+
     let addr = "0.0.0.0:9000";
 
     println!("Serving on {}", addr);

@@ -26,32 +26,32 @@ You need to have PostgreSQL database running on port 5342.
 Create user:
 
 ```sql
-CREATE USER mcalendar WITH ENCRYPTED PASSWORD 'mcalendar';
+create user mcalendar with encrypted password 'mcalendar';
 ```
 
 Create database `mcalendar`:
 
 ```sql
-CREATE DATABASE mcalendar WITH
-    OWNER mcalendar
-    ENCODING = 'UTF8'
-    TEMPLATE template0;
+create database mcalendar with
+    owner mcalendar
+    encoding = 'UTF8'
+    template template0;
 ```
 
 Switch to newly created database and create table `events`:
 
 ```sql
-CREATE TABLE Events (
-    Date DATE NOT NULL,
-    Event TEXT NOT NULL,
-    PRIMARY KEY(Date)
+create table events (
+    date date not null,
+    event text not null,
+    primary key(date)
 );
 ```
 
 Grant user priviliges for newly created database:
 
 ```sql
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO mcalendar;
+grant all privileges on all tables in schema public to mcalendar;
 ```
 
 Start Docker image. It will listen on port 9000.
