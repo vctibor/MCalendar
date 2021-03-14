@@ -79,12 +79,10 @@ pub async fn read_month(pool: &Pool<Postgres>, month: u32, year: u32) -> Month {
 
     for day in days {
 
-        //let is_current_day =
-        //    day.day() == now.day() &&
-        //    month == now.month() &&
-        //    year == now.year() as u32;
-
-        let is_current_day = day.day() == 9;
+        let is_current_day =
+            day.day() == now.day() &&
+            month == now.month() &&
+            year == now.year() as u32;
 
         let weekday = day.weekday();
 

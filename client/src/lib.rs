@@ -93,7 +93,9 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
 
         Msg::SubmitChanges => {
-            let url = format!("/api/{}/{}", model.month.year, model.month.month);
+            let month = model.month.month;
+            let year = model.month.year;
+            let url = format!("/api/{}/{}", year, month);
 
             let request = Request::new(url)
                 .method(Method::Post)
@@ -102,8 +104,9 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 
             orders.perform_cmd(async {
                 let _response = fetch(request).await.expect("HTTP request failed");
-                Msg::FetchCurrentMonth
             });
+
+            orders.perform_cmd(fetch_month(month, year));
         }
     }
 }

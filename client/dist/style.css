@@ -16,14 +16,13 @@ hr {
 input {
   background-color: #222;
   border-style: none;
-  width: 100%;
+  width: 90%;
   font-size: 90%;
   min-width: 100px;
   display: table-cell;
   border-bottom: 1px solid #333;
   text-shadow: 2px 2px 2px #111;
   color: #aaa;
-  padding-right: 5vw;
 }
 
 table {
@@ -62,6 +61,7 @@ table {
   min-width: 100px;
   font-style: italic;
   width: 5%;
+  font-weight: bold;
 }
 
 .col_event {
