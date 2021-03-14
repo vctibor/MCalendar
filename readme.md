@@ -15,13 +15,7 @@ Web based calendar following KISS principle, as minimalist as possible. Fullstac
 
 ### Setup using Dockerfile
 
-You have to build Dockerfile on your local machine:
-
-```
-docker build -t mcalendar .
-```
-
-You need to have PostgreSQL database running on port 5342.
+You need to have PostgreSQL database running on port 5342. Database setup:
 
 Create user:
 
@@ -54,13 +48,24 @@ Grant user priviliges for newly created database:
 grant all privileges on all tables in schema public to mcalendar;
 ```
 
-Start Docker image. It will listen on port 9000.
+You have to build Dockerfile on your local machine:
+
+```
+docker build -t mcalendar .
+```
+
+Start Docker image. It will listen on port 9000. You need to provide environment variable DATABASE_URL containing connection string to your database.
+
+```sh
+docker run \
+    -p 9999:9000 \
+    -e DATABASE_URL="postgresql://<user>:<password>@<server>:<port>" \
+    mcalendar
+```
 
 ## TODO
 
  - Highlight current day with different color.
-
- - On Enter key write all strings (currently only selected row).
 
 ## Technical details
 
