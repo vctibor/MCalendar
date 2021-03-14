@@ -5,11 +5,11 @@ use std::collections::HashMap;
 use sqlx::types::time::Date;
 use sqlx::{Pool, Postgres};
 
-use futures::stream::StreamExt;
-
-
 pub async fn read_events(pool: &Pool<Postgres>, month: u32, year: u32) -> HashMap<u32, String> {
-    
+
+    #[allow(unused_imports)]
+    use futures::stream::StreamExt;
+
     struct Row {
         day: Option<f64>,
         event: String

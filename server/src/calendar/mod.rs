@@ -1,5 +1,6 @@
 //! Business logic layer.
-use chrono::{NaiveDate, Datelike};
+
+use chrono::{Local, NaiveDate, Datelike};
 use sqlx::{Pool, Postgres};
 
 use mcalendar_shared::*;
@@ -74,25 +75,34 @@ pub async fn read_month(pool: &Pool<Postgres>, month: u32, year: u32) -> Month {
 
     let mut week: Vec<Day> = Vec::with_capacity(7);
 
-    for day in days { 
+    let now = Local::now().date();
+
+    for day in days {
+
+        //let is_current_day =
+        //    day.day() == now.day() &&
+        //    month == now.month() &&
+        //    year == now.year() as u32;
+
+        let is_current_day = day.day() == 9;
 
         let weekday = day.weekday();
 
-        let mut non_workday =
+        let mut is_non_workday =
             weekday == chrono::Weekday::Sat ||
             weekday == chrono::Weekday::Sun;
 
         let weekday: String = get_weekday_name(weekday);
 
-        let day: u32 = day.day();
+        let day_number: u32 = day.day();
 
-        let mut event = events.remove(&day).unwrap_or("".to_owned());
+        let mut event = events.remove(&day_number).unwrap_or("".to_owned());
 
-        if holidays.contains_key(&day) {
-            let holiday = holidays.get(&day);
+        if holidays.contains_key(&day_number) {
+            let holiday = holidays.get(&day_number);
 
             if let Some(holiday) = holiday {
-                non_workday = true;
+                is_non_workday = true;
 
                 if event == "" {
                     event = holiday.to_string();
@@ -101,15 +111,13 @@ pub async fn read_month(pool: &Pool<Postgres>, month: u32, year: u32) -> Month {
         }
         
         let entry = Day {
-            day,
-            weekday: weekday.clone(),
-            event,
-            is_non_workday: non_workday
+            day: day_number, weekday, event,
+            is_non_workday, is_current_day
         };
 
         week.push(entry);
 
-        if weekday == get_weekday_name(chrono::Weekday::Sun) {
+        if day.weekday() == chrono::Weekday::Sun {
             weeks.push(Week { days: week });
             week = Vec::with_capacity(7);
         }

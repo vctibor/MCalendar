@@ -1,10 +1,26 @@
 use seed::{prelude::*, *};
-use mcalendar_shared::Month;
+use mcalendar_shared::{Day, Month};
 
 const ENTER_KEY: &str = "Enter";
 
 struct Model {
     month: Month
+}
+
+fn color(day: &Day) -> String {
+    if day.is_current_day {
+        if day.is_non_workday {
+            "#ffa600".to_owned()
+        } else {
+            "#999".to_owned()
+        }
+    } else {
+        if day.is_non_workday {
+            "#a86600".to_owned()
+        } else {
+            "#555".to_owned()
+        }
+    }
 }
 
 async fn fetch_month(month: u32, year: u32) -> Msg {
@@ -124,11 +140,13 @@ fn body(month: Month) -> Node<Msg> {
                     week.days.iter().enumerate().map(|(day_id, day)| {
                         div![
                             td![
-                                C!["col_date", IF!(day.is_non_workday => "non_working_day")], 
+                                C!["col_date"],
+                                attrs![At::Style => format!("color:{}", color(&day))],
                                 format!("{}. {}.", day.day, month.month),
                             ],
                             td![
-                                C!["col_weekday", IF!(day.is_non_workday => "non_working_day")],
+                                C!["col_weekday"],
+                                attrs![At::Style => format!("color:{}", color(&day))],
                                 format!("{}", day.weekday),
                             ],
                             td![

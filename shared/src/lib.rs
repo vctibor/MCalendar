@@ -52,5 +52,6 @@ pub struct Day {
     pub day: u32,
     pub weekday: String,
     pub event: String,
-    pub is_non_workday: bool
+    pub is_non_workday: bool,
+    pub is_current_day: bool,
 }
