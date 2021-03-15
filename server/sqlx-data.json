@@ -1,18 +1,5 @@
 {
   "db": "PostgreSQL",
-  "34f36edc3ff9621284482e4747f0f759df46135eacfc8b9f8b4020a52b0145be": {
-    "query": "insert into events (date, event) values ($1, $2) \n        on conflict (date) do update\n        set event = $2;",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Date",
-          "Text"
-        ]
-      },
-      "nullable": []
-    }
-  },
   "8ae535404f598da57a0462f3659209a9b30a8829e4a55ece0dbbbf20c955bd58": {
     "query": "select extract(day from date) as day, event from events\n        where extract(month from date) = $1\n        and extract(year from date) = $2;",
     "describe": {
@@ -38,6 +25,19 @@
         null,
         false
       ]
+    }
+  },
+  "b3b10f32fbbedf9070a9b377f6740f76e749e11fcc870e166f858fc67d3d199c": {
+    "query": "insert into events (date, event)\n        select * from\n        unnest($1::date[], $2::text[])\n        on conflict (date) do update\n        set event = excluded.event;",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "DateArray",
+          "TextArray"
+        ]
+      },
+      "nullable": []
     }
   }
 }
