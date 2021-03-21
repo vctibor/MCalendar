@@ -1,0 +1,45 @@
+version: "3.9"
+services:
+
+  postgres:
+    image: postgres
+    environment:
+      POSTGRES_USER: mcalendar
+      POSTGRES_PASSWORD: mcalendar
+      PGDATA: /data/postgres
+    volumes:
+       - ./postgres:/data/postgres
+    ports:
+      - "5432:5432"
+    networks:
+      - mcalendar
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: a@a.a
+      PGADMIN_DEFAULT_PASSWORD: Heslo1234
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_LISTEN_PORT: 8888
+    volumes:
+       - ./pgadmin:/root/.pgadmin
+    ports:
+      - "8888:8888"
+    networks:
+      - mcalendar
+    restart: unless-stopped
+    
+  mcalendar:
+    image: vladimirmalky/mcalendar
+    environment:
+      DATABASE_URL: postgresql://mcalendar:mcalendar@postgres:5432
+    ports:
+      - "9000:9000"
+    networks:
+      - mcalendar
+    restart: unless-stopped
+
+networks:
+  mcalendar:
+    driver: bridge
