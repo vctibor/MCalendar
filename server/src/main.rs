@@ -55,7 +55,7 @@ async fn write_events(path: web::Path<(u32, u32)>, month_events: web::Json<Month
 #[actix_web::main]
 async fn main() -> std::io::Result<()>
 {
-    let conn_string = std::env::var("DATABASE_URL").unwrap();
+    let conn_string = std::env::var("DATABASE_URL")?;
 
     let pg_pool = PgPoolOptions::new()
         .max_connections(2)
