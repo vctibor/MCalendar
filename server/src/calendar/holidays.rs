@@ -31,6 +31,8 @@ struct LocalizedText {
 /// Calls external web service to obtain list of public holidays for given month and year.
 pub async fn get_holidays(month: u32, year: u32) -> HashMap<u32, String> {
 
+    let now = std::time::Instant::now();
+
     let mut dict = HashMap::new();
 
     if year < 1900 {
@@ -98,6 +100,8 @@ pub async fn get_holidays(month: u32, year: u32) -> HashMap<u32, String> {
             day, holiday_name
         );
     }
+
+    println!("get_holidays: {:?}", now.elapsed());
 
     dict
 }

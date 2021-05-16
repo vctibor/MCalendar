@@ -7,6 +7,8 @@ use sqlx::{Pool, Postgres};
 
 pub async fn read_events(pool: &Pool<Postgres>, month: u32, year: u32) -> HashMap<u32, String> {
 
+    let now = std::time::Instant::now();
+
     #[allow(unused_imports)]
     use futures::stream::StreamExt;
 
@@ -24,13 +26,17 @@ pub async fn read_events(pool: &Pool<Postgres>, month: u32, year: u32) -> HashMa
         and extract(year from date) = $2;", month, year)
         .fetch(pool);
 
-    rows.collect::<Vec<sqlx::Result<Row>>>().await
+    let events = rows.collect::<Vec<sqlx::Result<Row>>>().await
         .into_iter()
         .filter(|x| x.is_ok())
         .map(|x| x.unwrap())
         .filter(|x| x.day.is_some())
         .map(|x| (x.day.unwrap() as u32, x.event))
-        .collect()
+        .collect();
+
+    println!("read_events: {:?}", now.elapsed());
+
+    events
 }
 
 pub async fn write_events(pool: &Pool<Postgres>, events: Vec<(Date, String)>) -> bool {

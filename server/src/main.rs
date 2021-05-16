@@ -29,9 +29,7 @@ async fn get_events(path: web::Path<(u32, u32)>) -> Result<String> {
 
     println!("=== get_events ===");
 
-    use std::time::Instant;
-
-    let now = Instant::now();
+    let now = std::time::Instant::now();
 
     let (year, month) = path.into_inner();
     
