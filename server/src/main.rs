@@ -26,11 +26,28 @@ async fn get_current() -> Result<String> {
 /// Get events for given month in given year.
 #[get("/api/{year}/{month}")]
 async fn get_events(path: web::Path<(u32, u32)>) -> Result<String> {
+
+    println!("=== get_events ===");
+
+    use std::time::Instant;
+
+    let now = Instant::now();
+
     let (year, month) = path.into_inner();
+    
     assert!(month > 0 && month < 13, "Month must be between 1 and 12!");
+    
     let pool: &Pool<Postgres> = CONN_POOL.get().unwrap();
+    
     let month: Month = read_month(pool, month, year).await;
-    Ok(month.to_json())
+    
+    let res = month.to_json();
+
+    println!("get_events: {:?}", now.elapsed());
+
+    println!("======");
+
+    Ok(res)
 }
 
 /// Write events for given month in given year.
@@ -55,7 +72,9 @@ async fn write_events(path: web::Path<(u32, u32)>, month_events: web::Json<Month
 #[actix_web::main]
 async fn main() -> std::io::Result<()>
 {
-    let conn_string = std::env::var("DATABASE_URL")?;
+    let conn_string = std::env::var("DATABASE_URL").unwrap();
+
+    println!("{}", conn_string);
 
     let pg_pool = PgPoolOptions::new()
         .max_connections(2)

@@ -1,5 +1,7 @@
 #!/usr/bin/env sh 
 
+echo $DATABASE_URL
+
 cd shared
 cargo build
 cd ..

@@ -33,6 +33,10 @@ pub async fn get_holidays(month: u32, year: u32) -> HashMap<u32, String> {
 
     let mut dict = HashMap::new();
 
+    if year < 1900 {
+        return dict;
+    }
+
     let addr: &str = &format!(
         "http://kayaposoft.com/enrico/json/v2.0/?action=getHolidaysForMonth&month={0}&year={1}&country=cz",
         month, year);
