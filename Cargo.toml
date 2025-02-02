@@ -12,6 +12,7 @@ edition = "2018"
 members = [
     "client",
     "server",
+    "utils/exporter"
 ]
 
 [package.metadata.wasm-pack.profile.release]

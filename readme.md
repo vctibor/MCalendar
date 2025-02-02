@@ -19,6 +19,7 @@ Self-hosted calendar following KISS principle, as minimalist as possible. Fullst
 ```sh
 cargo install cargo-make
 cargo install wasm-bindgen-cli
+cargo install sqlx-cli
 ```
 
 ### Database
@@ -64,7 +65,7 @@ Use `dev_run.sh` script to compile frontend, copy artifacts to backend and compi
 
 You need to re-run this script whenever you want to reload your changes.
 
-You can use `build_release.sh` script to compile everthing using `release` configuration.
+You can use `build_release.sh` script to compile everything using `release` configuration.
 
 ### Docker
 

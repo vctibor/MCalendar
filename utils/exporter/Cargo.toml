@@ -1,0 +1,14 @@
+[package]
+version = "0.1.0"
+name = "mcalendar_exporter"
+edition = "2018"
+
+[dependencies]
+sqlx = { version = "0.5", features = [
+    "runtime-tokio-native-tls",
+    "postgres",
+    "time",
+    "offline"
+]}
+actix-web = "4.0"
+string-builder = "0.2.0"
