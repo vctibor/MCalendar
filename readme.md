@@ -14,6 +14,13 @@ Self-hosted calendar following KISS principle, as minimalist as possible. Fullst
 
 ## Setup
 
+### Cargo
+
+```sh
+cargo install cargo-make
+cargo install wasm-bindgen-cli
+```
+
 ### Database
 
 You need to have PostgreSQL database running on port 5342. Database setup:

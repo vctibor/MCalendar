@@ -7,8 +7,11 @@ edition = "2018"
 crate-type = ["cdylib"]
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3.18"
+#wasm-bindgen-test = "0.3.18"
 
 [dependencies]
-seed = "0.8.0"
+seed = "0.9.0"
 mcalendar_shared = { path = "../shared" }
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
