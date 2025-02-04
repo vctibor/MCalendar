@@ -2,6 +2,8 @@
 
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
+use std::time::Duration;
+use reqwest::Client;
 
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize)]
@@ -43,7 +45,18 @@ pub async fn get_holidays(month: u32, year: u32) -> HashMap<u32, String> {
         "http://kayaposoft.com/enrico/json/v2.0/?action=getHolidaysForMonth&month={0}&year={1}&country=cz",
         month, year);
 
-    let response = reqwest::get(addr).await;
+    //let response = reqwest::get(addr).await;
+
+    let client = Client::builder()
+        .timeout(Duration::from_secs(5))
+        .build();
+
+    let client = match client {
+        Ok(c) => c,
+        Err(e) => return dict
+    };
+
+    let response = client.get(addr).send().await;
 
     let body = match response {
         Ok(val) => val,
