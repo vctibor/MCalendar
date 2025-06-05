@@ -11,11 +11,16 @@ struct Row {
 
 #[actix_web::main]
 async fn main() {
+    println!("Running MCalendar data exporter util.");
+
     let conn_string = std::env::var("DATABASE_URL").unwrap();
+
+    println!("Conn string is {}", conn_string);
 
     let pool = PgPoolOptions::new()
         .max_connections(2)
         .connect(&conn_string).await.unwrap();
+
 
     let rows: Vec<Row> = sqlx::query_as!(Row,
         "select * from events order by date")
@@ -26,6 +31,8 @@ async fn main() {
         .filter(|row| !row.event.trim().is_empty())
         .collect();
 
+
+    /*
     let mut builder = Builder::default();
     for row in rows {
         builder.append(format!("{} {}", row.date, row.event));
@@ -33,4 +40,6 @@ async fn main() {
     }
 
     fs::write("data.txt", builder.string().unwrap()).unwrap()
+
+     */
 }
